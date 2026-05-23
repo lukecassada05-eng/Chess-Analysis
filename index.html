@@ -43,6 +43,20 @@
   .proxy-status.ok { background:var(--teal-soft); color:var(--teal); }
   .proxy-status.err { background:var(--accent-soft); color:var(--accent); }
   .proxy-status.idle { background:var(--cream); color:var(--ink-mute); }
+  .pgn-tabs { display:flex; gap:0; margin-bottom:12px; border:1px solid var(--border-strong); border-radius:var(--radius); overflow:hidden; }
+  .pgn-tab { flex:1; font-family:'IBM Plex Mono',monospace; font-size:0.78rem; letter-spacing:0.04em; text-transform:uppercase; padding:9px 0; text-align:center; cursor:pointer; background:var(--cream); color:var(--ink-mute); border:none; transition:background 0.15s,color 0.15s; }
+  .pgn-tab.active { background:var(--ink); color:white; }
+  .pgn-tab:first-child { border-right:1px solid var(--border-strong); }
+  .drop-zone { width:100%; min-height:160px; border:2px dashed var(--border-strong); border-radius:var(--radius); background:var(--ivory); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; cursor:pointer; transition:border-color 0.2s, background 0.2s; text-align:center; padding:24px; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color:var(--brown); background:var(--cream); }
+  .drop-zone.has-file { border-style:solid; border-color:var(--teal); background:var(--teal-soft); }
+  .drop-icon { font-size:2rem; line-height:1; }
+  .drop-label { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--ink-mute); line-height:1.5; }
+  .drop-label strong { color:var(--ink); font-weight:600; }
+  .drop-label.success { color:var(--teal); }
+  .drop-file-input { display:none; }
+  .btn-browse { font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--brown-dark); background:white; border:1px solid var(--border-strong); border-radius:var(--radius); padding:6px 16px; cursor:pointer; transition:background 0.15s; }
+  .btn-browse:hover { background:var(--cream); }
   textarea { width:100%; height:220px; font-family:'IBM Plex Mono',monospace; font-size:0.82rem; line-height:1.6; color:var(--ink); background:var(--ivory); border:1px solid var(--border-strong); border-radius:var(--radius); padding:14px; resize:vertical; outline:none; transition:border-color 0.2s; }
   textarea:focus { border-color:var(--brown); }
   textarea::placeholder { color:var(--ink-mute); }
@@ -141,8 +155,14 @@
         <span class="proxy-status idle" id="proxy-status">not set</span>
       </div>
 
-      <label class="field-label" for="pgn-input">Paste PGN Games</label>
-      <textarea id="pgn-input" placeholder="Paste one or multiple PGN games here.
+      <label class="field-label">PGN Input</label>
+      <div class="pgn-tabs">
+        <button class="pgn-tab active" id="tab-paste" onclick="switchTab('paste')">✎ Paste text</button>
+        <button class="pgn-tab" id="tab-upload" onclick="switchTab('upload')">↑ Upload file</button>
+      </div>
+
+      <div id="panel-paste">
+        <textarea id="pgn-input" placeholder="Paste one or multiple PGN games here.
 
 Works with all formats:
 • Chess.com exports (with or without Stockfish annotations)
@@ -151,6 +171,19 @@ Works with all formats:
 • Single games or dozens at once
 
 The most common player name will be identified automatically."></textarea>
+      </div>
+
+      <div id="panel-upload" style="display:none;">
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-icon">♟</div>
+          <div class="drop-label" id="drop-label">
+            <strong>Drop your .pgn file here</strong><br>or click to browse
+          </div>
+          <button class="btn-browse" id="btn-browse" onclick="document.getElementById('file-input').click(); event.stopPropagation();">Browse files</button>
+        </div>
+        <input class="drop-file-input" type="file" id="file-input" accept=".pgn,.txt">
+      </div>
+
       <div class="pgn-info" id="pgn-info"></div>
 
       <div class="controls-row">
@@ -211,6 +244,50 @@ const resultsArea  = document.getElementById('results-area');
 const errorBox     = document.getElementById('error-box');
 const pgnInfo      = document.getElementById('pgn-info');
 const setupBanner  = document.getElementById('setup-banner');
+const dropZone     = document.getElementById('drop-zone');
+const fileInput    = document.getElementById('file-input');
+const dropLabel    = document.getElementById('drop-label');
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tab-paste').classList.toggle('active', tab==='paste');
+  document.getElementById('tab-upload').classList.toggle('active', tab==='upload');
+  document.getElementById('panel-paste').style.display = tab==='paste' ? '' : 'none';
+  document.getElementById('panel-upload').style.display = tab==='upload' ? '' : 'none';
+}
+
+// ── File reading ──────────────────────────────────────────────────────────
+function loadPGNFile(file) {
+  if (!file) return;
+  if (!file.name.match(/\.(pgn|txt)$/i)) {
+    showError('Please upload a .pgn or .txt file.'); return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    pgnInput.value = text;
+    dropZone.classList.add('has-file');
+    dropLabel.innerHTML = `<span class="success">✓ ${file.name} loaded (${(file.size/1024).toFixed(1)} KB)</span>`;
+    triggerPgnInfo(text);
+  };
+  reader.onerror = () => showError('Could not read the file. Please try again.');
+  reader.readAsText(file);
+}
+
+// Drag and drop
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  loadPGNFile(file);
+});
+fileInput.addEventListener('change', () => loadPGNFile(fileInput.files[0]));
+
+// ── Get current PGN (works for both paste and upload) ───────────────────
+function getCurrentPGN() { return pgnInput.value.trim(); }
 
 // ── Proxy URL persistence ─────────────────────────────────────────────────
 const PROXY_KEY = 'chess_proxy_url';
@@ -294,9 +371,9 @@ function countGames(pgn) {
 }
 
 // ── Live PGN info ────────────────────────────────────────────────────────────
-pgnInput.addEventListener('input', () => {
-  const raw = pgnInput.value.trim();
-  if (!raw) { pgnInfo.classList.remove('visible'); return; }
+function triggerPgnInfo(text) {
+  const raw = text || '';
+  if (!raw.trim()) { pgnInfo.classList.remove('visible'); return; }
   const player = extractPlayer(raw);
   const total  = countGames(raw);
   const fmt    = detectFormat(raw);
@@ -308,7 +385,9 @@ pgnInput.addEventListener('input', () => {
   if (annot) parts.push('annotated ✓');
   pgnInfo.textContent = parts.join('  ·  ');
   pgnInfo.classList.add('visible');
-});
+}
+
+pgnInput.addEventListener('input', () => triggerPgnInfo(pgnInput.value));
 
 // ── Loading cycle ────────────────────────────────────────────────────────────
 const MSGS=['Parsing PGN structure…','Identifying player…','Studying opening choices…','Finding recurring mistakes…','Building variation lines…','Finalising coach report…'];
@@ -387,13 +466,19 @@ function renderResults(d) {
 
 // ── Clear ────────────────────────────────────────────────────────────────────
 clearBtn.addEventListener('click',()=>{
-  pgnInput.value=''; pgnInfo.classList.remove('visible'); resultsArea.classList.remove('visible'); hideError();
+  pgnInput.value='';
+  fileInput.value='';
+  dropZone.classList.remove('has-file');
+  dropLabel.innerHTML='<strong>Drop your .pgn file here</strong><br>or click to browse';
+  pgnInfo.classList.remove('visible');
+  resultsArea.classList.remove('visible');
+  hideError();
 });
 
 // ── Analyse ──────────────────────────────────────────────────────────────────
 analyzeBtn.addEventListener('click', async () => {
   hideError();
-  const rawPGN = pgnInput.value.trim();
+  const rawPGN = getCurrentPGN();
   if (!rawPGN) { showError('Please paste one or more PGN games first.'); return; }
 
   const proxyURL = proxyInput.value.trim();
