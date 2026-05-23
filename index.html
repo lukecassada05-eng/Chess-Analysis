@@ -25,9 +25,6 @@
   .chess-icon { width:44px; height:44px; background:var(--ink); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; }
   h1 { font-family:'Playfair Display',Georgia,serif; font-size:2.2rem; font-weight:700; letter-spacing:-0.02em; line-height:1.1; color:var(--ink); }
   .tagline { font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--ink-mute); letter-spacing:0.08em; text-transform:uppercase; margin-top:6px; }
-  .setup-banner { background:var(--gold-soft); border:1px solid rgba(180,130,50,0.35); border-radius:8px; padding:14px 18px; margin-bottom:28px; font-size:0.88rem; color:var(--brown-dark); line-height:1.6; }
-  .setup-banner strong { font-weight:700; }
-  .setup-banner code { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; background:rgba(180,130,50,0.15); padding:1px 6px; border-radius:3px; }
   .input-section { background:white; border:1px solid var(--border-strong); border-radius:10px; overflow:hidden; margin-bottom:32px; box-shadow:0 2px 12px rgba(0,0,0,0.06); }
   .input-header { background:var(--ink); color:white; padding:14px 20px; display:flex; align-items:center; gap:10px; }
   .input-header-text { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; letter-spacing:0.04em; }
@@ -35,25 +32,16 @@
   .dot-r{background:#ff5f57;} .dot-y{background:#febc2e;} .dot-g{background:#28c840;}
   .input-body { padding:20px; }
   .field-label { font-family:'IBM Plex Mono',monospace; font-size:0.75rem; color:var(--ink-mute); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; display:block; }
-  .proxy-row { display:flex; gap:8px; margin-bottom:14px; align-items:center; }
-  .proxy-input { flex:1; font-family:'IBM Plex Mono',monospace; font-size:0.8rem; color:var(--ink); background:var(--ivory); border:1px solid var(--border-strong); border-radius:var(--radius); padding:9px 12px; outline:none; transition:border-color 0.2s; }
-  .proxy-input:focus { border-color:var(--brown); }
-  .proxy-input::placeholder { color:var(--ink-mute); }
-  .proxy-status { font-family:'IBM Plex Mono',monospace; font-size:0.72rem; padding:4px 10px; border-radius:20px; white-space:nowrap; }
-  .proxy-status.ok { background:var(--teal-soft); color:var(--teal); }
-  .proxy-status.err { background:var(--accent-soft); color:var(--accent); }
-  .proxy-status.idle { background:var(--cream); color:var(--ink-mute); }
-  .pgn-tabs { display:flex; gap:0; margin-bottom:12px; border:1px solid var(--border-strong); border-radius:var(--radius); overflow:hidden; }
+  .pgn-tabs { display:flex; margin-bottom:12px; border:1px solid var(--border-strong); border-radius:var(--radius); overflow:hidden; }
   .pgn-tab { flex:1; font-family:'IBM Plex Mono',monospace; font-size:0.78rem; letter-spacing:0.04em; text-transform:uppercase; padding:9px 0; text-align:center; cursor:pointer; background:var(--cream); color:var(--ink-mute); border:none; transition:background 0.15s,color 0.15s; }
   .pgn-tab.active { background:var(--ink); color:white; }
   .pgn-tab:first-child { border-right:1px solid var(--border-strong); }
-  .drop-zone { width:100%; min-height:160px; border:2px dashed var(--border-strong); border-radius:var(--radius); background:var(--ivory); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; cursor:pointer; transition:border-color 0.2s, background 0.2s; text-align:center; padding:24px; }
+  .drop-zone { width:100%; min-height:160px; border:2px dashed var(--border-strong); border-radius:var(--radius); background:var(--ivory); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; cursor:pointer; transition:border-color 0.2s,background 0.2s; text-align:center; padding:24px; }
   .drop-zone:hover, .drop-zone.drag-over { border-color:var(--brown); background:var(--cream); }
   .drop-zone.has-file { border-style:solid; border-color:var(--teal); background:var(--teal-soft); }
   .drop-icon { font-size:2rem; line-height:1; }
   .drop-label { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--ink-mute); line-height:1.5; }
   .drop-label strong { color:var(--ink); font-weight:600; }
-  .drop-label.success { color:var(--teal); }
   .drop-file-input { display:none; }
   .btn-browse { font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--brown-dark); background:white; border:1px solid var(--border-strong); border-radius:var(--radius); padding:6px 16px; cursor:pointer; transition:background 0.15s; }
   .btn-browse:hover { background:var(--cream); }
@@ -124,7 +112,6 @@
 <body>
 <div class="board-pattern"></div>
 <div class="site-wrapper">
-
   <header>
     <div class="logo-row">
       <div class="chess-icon">♟</div>
@@ -135,32 +122,17 @@
     </div>
   </header>
 
-  <div class="setup-banner" id="setup-banner">
-    <strong>One-time setup required.</strong> This site calls the Anthropic API via a proxy worker.
-    Enter your Cloudflare Worker URL below and it will be saved in your browser.
-    Don't have one yet? See the <code>worker.js</code> file in the repo for setup instructions (takes ~3 minutes, free).
-  </div>
-
   <div class="input-section">
     <div class="input-header">
       <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
       <span class="input-header-text" style="margin-left:6px;">pgn_input.txt</span>
     </div>
     <div class="input-body">
-
-      <label class="field-label" for="proxy-url">Worker Proxy URL</label>
-      <div class="proxy-row">
-        <input class="proxy-input" id="proxy-url" type="url"
-          placeholder="https://chess-proxy.YOUR-NAME.workers.dev" autocomplete="off" spellcheck="false"/>
-        <span class="proxy-status idle" id="proxy-status">not set</span>
-      </div>
-
       <label class="field-label">PGN Input</label>
       <div class="pgn-tabs">
         <button class="pgn-tab active" id="tab-paste" onclick="switchTab('paste')">✎ Paste text</button>
         <button class="pgn-tab" id="tab-upload" onclick="switchTab('upload')">↑ Upload file</button>
       </div>
-
       <div id="panel-paste">
         <textarea id="pgn-input" placeholder="Paste one or multiple PGN games here.
 
@@ -172,26 +144,20 @@ Works with all formats:
 
 The most common player name will be identified automatically."></textarea>
       </div>
-
       <div id="panel-upload" style="display:none;">
         <div class="drop-zone" id="drop-zone">
           <div class="drop-icon">♟</div>
-          <div class="drop-label" id="drop-label">
-            <strong>Drop your .pgn file here</strong><br>or click to browse
-          </div>
-          <button class="btn-browse" id="btn-browse" onclick="document.getElementById('file-input').click(); event.stopPropagation();">Browse files</button>
+          <div class="drop-label" id="drop-label"><strong>Drop your .pgn file here</strong><br>or click to browse</div>
+          <button class="btn-browse" onclick="document.getElementById('file-input').click();event.stopPropagation();">Browse files</button>
         </div>
         <input class="drop-file-input" type="file" id="file-input" accept=".pgn,.txt">
       </div>
-
       <div class="pgn-info" id="pgn-info"></div>
-
       <div class="controls-row">
-        <span class="hint-text">Supports plain PGN, chess.com &amp; Lichess exports — annotated or unannotated</span>
+        <span class="hint-text">Supports chess.com, Lichess &amp; plain PGN — annotated or unannotated</span>
         <button class="btn-clear" id="btn-clear">Clear</button>
         <button class="btn-analyze" id="btn-analyze">♟ Analyse Games</button>
       </div>
-
       <div class="loading-bar-wrap" id="loading-wrap">
         <div class="loading-bar"><div class="loading-bar-inner"></div></div>
         <div class="loading-text" id="loading-text">Parsing games…</div>
@@ -230,25 +196,22 @@ The most common player name will be identified automatically."></textarea>
 
   <div class="footer-note">Powered by Claude AI &nbsp;·&nbsp; Analysis is educational, not engine-perfect</div>
 </div>
-
 <script>
-// ── DOM ──────────────────────────────────────────────────────────────────────
-const analyzeBtn   = document.getElementById('btn-analyze');
-const clearBtn     = document.getElementById('btn-clear');
-const pgnInput     = document.getElementById('pgn-input');
-const proxyInput   = document.getElementById('proxy-url');
-const proxyStatus  = document.getElementById('proxy-status');
-const loadingWrap  = document.getElementById('loading-wrap');
-const loadingText  = document.getElementById('loading-text');
-const resultsArea  = document.getElementById('results-area');
-const errorBox     = document.getElementById('error-box');
-const pgnInfo      = document.getElementById('pgn-info');
-const setupBanner  = document.getElementById('setup-banner');
-const dropZone     = document.getElementById('drop-zone');
-const fileInput    = document.getElementById('file-input');
-const dropLabel    = document.getElementById('drop-label');
+// Calls the Netlify serverless function — no config needed, just works
+const API = '/.netlify/functions/analyse';
 
-// ── Tab switching ─────────────────────────────────────────────────────────
+const analyzeBtn  = document.getElementById('btn-analyze');
+const clearBtn    = document.getElementById('btn-clear');
+const pgnInput    = document.getElementById('pgn-input');
+const loadingWrap = document.getElementById('loading-wrap');
+const loadingText = document.getElementById('loading-text');
+const resultsArea = document.getElementById('results-area');
+const errorBox    = document.getElementById('error-box');
+const pgnInfo     = document.getElementById('pgn-info');
+const dropZone    = document.getElementById('drop-zone');
+const fileInput   = document.getElementById('file-input');
+const dropLabel   = document.getElementById('drop-label');
+
 function switchTab(tab) {
   document.getElementById('tab-paste').classList.toggle('active', tab==='paste');
   document.getElementById('tab-upload').classList.toggle('active', tab==='upload');
@@ -256,99 +219,48 @@ function switchTab(tab) {
   document.getElementById('panel-upload').style.display = tab==='upload' ? '' : 'none';
 }
 
-// ── File reading ──────────────────────────────────────────────────────────
 function loadPGNFile(file) {
   if (!file) return;
-  if (!file.name.match(/\.(pgn|txt)$/i)) {
-    showError('Please upload a .pgn or .txt file.'); return;
-  }
+  if (!file.name.match(/\.(pgn|txt)$/i)) { showError('Please upload a .pgn or .txt file.'); return; }
   const reader = new FileReader();
   reader.onload = e => {
-    const text = e.target.result;
-    pgnInput.value = text;
+    pgnInput.value = e.target.result;
     dropZone.classList.add('has-file');
-    dropLabel.innerHTML = `<span class="success">✓ ${file.name} loaded (${(file.size/1024).toFixed(1)} KB)</span>`;
-    triggerPgnInfo(text);
+    dropLabel.innerHTML = `<span style="color:var(--teal)">✓ ${file.name} loaded (${(file.size/1024).toFixed(1)} KB)</span>`;
+    triggerPgnInfo(e.target.result);
   };
-  reader.onerror = () => showError('Could not read the file. Please try again.');
   reader.readAsText(file);
 }
 
-// Drag and drop
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  loadPGNFile(file);
-});
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); loadPGNFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', () => loadPGNFile(fileInput.files[0]));
 
-// ── Get current PGN (works for both paste and upload) ───────────────────
 function getCurrentPGN() { return pgnInput.value.trim(); }
+function showError(msg)  { errorBox.innerHTML = msg; errorBox.classList.add('visible'); }
+function hideError()     { errorBox.classList.remove('visible'); }
+function setLoading(msg) { loadingText.textContent = msg; loadingWrap.classList.add('active'); }
+function stopLoading()   { loadingWrap.classList.remove('active'); }
 
-// ── Proxy URL persistence ─────────────────────────────────────────────────
-const PROXY_KEY = 'chess_proxy_url';
-const saved = localStorage.getItem(PROXY_KEY);
-if (saved) { proxyInput.value = saved; updateProxyStatus(saved); }
-
-proxyInput.addEventListener('input', () => {
-  const v = proxyInput.value.trim();
-  localStorage.setItem(PROXY_KEY, v);
-  updateProxyStatus(v);
-});
-
-function updateProxyStatus(url) {
-  if (!url) {
-    proxyStatus.textContent = 'not set';
-    proxyStatus.className = 'proxy-status idle';
-    setupBanner.style.display = '';
-  } else if (url.startsWith('https://') && url.includes('.workers.dev')) {
-    proxyStatus.textContent = 'looks good ✓';
-    proxyStatus.className = 'proxy-status ok';
-    setupBanner.style.display = 'none';
-  } else if (url.startsWith('https://')) {
-    proxyStatus.textContent = 'custom URL';
-    proxyStatus.className = 'proxy-status ok';
-    setupBanner.style.display = 'none';
-  } else {
-    proxyStatus.textContent = 'invalid URL';
-    proxyStatus.className = 'proxy-status err';
-  }
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function showError(msg){ errorBox.innerHTML=msg; errorBox.classList.add('visible'); }
-function hideError(){ errorBox.classList.remove('visible'); }
-function setLoading(msg){ loadingText.textContent=msg; loadingWrap.classList.add('active'); }
-function stopLoading(){ loadingWrap.classList.remove('active'); }
-
-// ── PGN processing ───────────────────────────────────────────────────────────
 function stripAnnotations(pgn) {
   let s = pgn;
   s = s.replace(/\{[^}]*\}/g, '');
   for (let i = 0; i < 8; i++) s = s.replace(/\([^()]*\)/g, '');
-  s = s.replace(/\$\d+/g, '');
-  s = s.replace(/[!?]{1,2}/g, '');
-  s = s.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-  return s;
+  s = s.replace(/\$\d+/g, '').replace(/[!?]{1,2}/g, '');
+  return s.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function extractAllTags(pgn, tag) {
   return [...pgn.matchAll(new RegExp(`\\[${tag}\\s+"([^"]*)"\\]`,'gi'))].map(m=>m[1]);
 }
-
 function detectFormat(pgn) {
   if (pgn.includes('chess.com')) return 'chess.com';
   if (pgn.includes('lichess.org')) return 'Lichess';
   return 'standard PGN';
 }
-
-function hasAnnotations(raw) {
-  return /\{/.test(raw) || /\(/.test(raw) || /\$\d+/.test(raw);
-}
+function hasAnnotations(raw) { return /\{/.test(raw) || /\(/.test(raw) || /\$\d+/.test(raw); }
 
 const SKIP = new Set(['?','anonymous','guest','lichess ai','stockfish']);
 function extractPlayer(pgn) {
@@ -358,22 +270,18 @@ function extractPlayer(pgn) {
   const s = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
   return s.length ? s[0][0] : null;
 }
-
 function countForPlayer(pgn, player) {
   const re = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const w = (pgn.match(new RegExp(`\\[White\\s+"${re(player)}"`, 'gi'))||[]).length;
-  const b = (pgn.match(new RegExp(`\\[Black\\s+"${re(player)}"`, 'gi'))||[]).length;
-  return { asWhite:w, asBlack:b };
+  return {
+    asWhite: (pgn.match(new RegExp(`\\[White\\s+"${re(player)}"`, 'gi'))||[]).length,
+    asBlack:  (pgn.match(new RegExp(`\\[Black\\s+"${re(player)}"`, 'gi'))||[]).length,
+  };
 }
+function countGames(pgn) { return (pgn.match(/^\[Event\s+/mg)||[]).length || 1; }
 
-function countGames(pgn) {
-  return (pgn.match(/^\[Event\s+/mg)||[]).length || 1;
-}
-
-// ── Live PGN info ────────────────────────────────────────────────────────────
 function triggerPgnInfo(text) {
-  const raw = text || '';
-  if (!raw.trim()) { pgnInfo.classList.remove('visible'); return; }
+  const raw = (text||'').trim();
+  if (!raw) { pgnInfo.classList.remove('visible'); return; }
   const player = extractPlayer(raw);
   const total  = countGames(raw);
   const fmt    = detectFormat(raw);
@@ -386,17 +294,23 @@ function triggerPgnInfo(text) {
   pgnInfo.textContent = parts.join('  ·  ');
   pgnInfo.classList.add('visible');
 }
-
 pgnInput.addEventListener('input', () => triggerPgnInfo(pgnInput.value));
 
-// ── Loading cycle ────────────────────────────────────────────────────────────
-const MSGS=['Parsing PGN structure…','Identifying player…','Studying opening choices…','Finding recurring mistakes…','Building variation lines…','Finalising coach report…'];
+const MSGS = ['Parsing PGN structure…','Identifying player…','Studying opening choices…','Finding recurring mistakes…','Building variation lines…','Finalising coach report…'];
 let msgIdx=0, msgTimer=null;
-function startLoadingCycle(){ msgIdx=0; setLoading(MSGS[0]); msgTimer=setInterval(()=>{ msgIdx=(msgIdx+1)%MSGS.length; setLoading(MSGS[msgIdx]); },2200); }
-function stopLoadingCycle(){ clearInterval(msgTimer); stopLoading(); }
+function startLoadingCycle() { msgIdx=0; setLoading(MSGS[0]); msgTimer=setInterval(()=>{ msgIdx=(msgIdx+1)%MSGS.length; setLoading(MSGS[msgIdx]); },2200); }
+function stopLoadingCycle()  { clearInterval(msgTimer); stopLoading(); }
 
-// ── Render ───────────────────────────────────────────────────────────────────
-function safe(v,fb){ return (v!==undefined&&v!==null&&v!=='') ? v : fb; }
+clearBtn.addEventListener('click', () => {
+  pgnInput.value=''; fileInput.value='';
+  dropZone.classList.remove('has-file');
+  dropLabel.innerHTML='<strong>Drop your .pgn file here</strong><br>or click to browse';
+  pgnInfo.classList.remove('visible');
+  resultsArea.classList.remove('visible');
+  hideError();
+});
+
+function safe(v,fb) { return (v!==undefined&&v!==null&&v!=='') ? v : fb; }
 
 function buildStats(d) {
   const row=document.getElementById('stats-row'); row.innerHTML='';
@@ -413,7 +327,6 @@ function renderResults(d) {
   if(bg>0) badges.innerHTML+=`<span class="color-badge badge-black">♚ Black ×${bg}</span>`;
   buildStats(d);
 
-  // Openings
   const ob=document.getElementById('openings-body'); ob.innerHTML='';
   const openings=d.openings||[];
   if(openings.length){
@@ -432,31 +345,28 @@ function renderResults(d) {
       openings.forEach(o=>{ const p=document.createElement('span'); p.className='opening-pill'; p.textContent=(o.name||'Unknown')+(o.count?` (${o.count}×)`:''); pills.appendChild(p); });
       ob.appendChild(pills);
     }
-  } else { ob.innerHTML='<p class="no-data">Opening data could not be determined from the provided games.</p>'; }
+  } else { ob.innerHTML='<p class="no-data">Opening data could not be determined.</p>'; }
 
-  // Issues
   const ib=document.getElementById('issues-body'); ib.innerHTML='';
   const issues=d.issues||[];
   if(issues.length){ issues.forEach((issue,i)=>{ const div=document.createElement('div'); div.className='issue-item'; div.innerHTML=`<div class="issue-label">Issue ${i+1}</div>${String(issue)}`; ib.appendChild(div); }); }
   else { ib.innerHTML='<p class="no-data">No major recurring issues identified.</p>'; }
 
-  // Lines
   const lb=document.getElementById('lines-body'); lb.innerHTML='';
   const lines=d.lines||[];
   if(lines.length){
     lines.forEach((line,i)=>{
       const div=document.createElement('div'); div.className='line-item';
       const ctx=String(line.context||line.label||'Variation '+(i+1));
-      const mvs=String(line.moves||line.line||line.continuation||'');
+      const mvs=String(line.moves||line.line||'');
       const expl=String(line.explanation||line.description||'');
       div.innerHTML=`<div class="line-head"><span class="line-num">Line ${i+1}</span><span class="line-name">${ctx}</span></div>${mvs?`<div class="moves-block">${mvs}</div>`:''}${expl?`<div class="line-desc">${expl}</div>`:''}`;
       lb.appendChild(div);
     });
-  } else { lb.innerHTML='<p class="no-data">No specific variation lines identified. Consider reviewing key decision points in your games manually.</p>'; }
+  } else { lb.innerHTML='<p class="no-data">No specific variation lines identified.</p>'; }
 
-  // Summary
   const sb=document.getElementById('summary-body'); sb.innerHTML='';
-  const summary=d.summary||d.coach_summary||d.narrative||'';
+  const summary=d.summary||d.coach_summary||'';
   if(summary){ const wrap=document.createElement('div'); wrap.className='summary-text'; wrap.innerHTML=String(summary).split(/\n{2,}/).map(p=>`<p>${p.trim()}</p>`).join(''); sb.appendChild(wrap); }
   else { sb.innerHTML='<p class="no-data">No summary available.</p>'; }
 
@@ -464,99 +374,65 @@ function renderResults(d) {
   resultsArea.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ── Clear ────────────────────────────────────────────────────────────────────
-clearBtn.addEventListener('click',()=>{
-  pgnInput.value='';
-  fileInput.value='';
-  dropZone.classList.remove('has-file');
-  dropLabel.innerHTML='<strong>Drop your .pgn file here</strong><br>or click to browse';
-  pgnInfo.classList.remove('visible');
-  resultsArea.classList.remove('visible');
-  hideError();
-});
-
-// ── Analyse ──────────────────────────────────────────────────────────────────
 analyzeBtn.addEventListener('click', async () => {
   hideError();
   const rawPGN = getCurrentPGN();
-  if (!rawPGN) { showError('Please paste one or more PGN games first.'); return; }
-
-  const proxyURL = proxyInput.value.trim();
-  if (!proxyURL || !proxyURL.startsWith('https://')) {
-    showError('Please enter your Cloudflare Worker URL above before analysing.<br>See the <strong>worker.js</strong> file in the repo for the 3-minute setup guide.');
-    return;
-  }
+  if (!rawPGN) { showError('Please paste or upload PGN games first.'); return; }
 
   const player     = extractPlayer(rawPGN);
   const format     = detectFormat(rawPGN);
   const annotated  = hasAnnotations(rawPGN);
   const totalGames = countGames(rawPGN);
-  const { asWhite, asBlack } = player ? countForPlayer(rawPGN, player) : {asWhite:0,asBlack:0};
+  const { asWhite, asBlack } = player ? countForPlayer(rawPGN,player) : {asWhite:0,asBlack:0};
   const cleanPGN   = stripAnnotations(rawPGN);
 
-  analyzeBtn.disabled = true;
+  analyzeBtn.disabled=true;
   startLoadingCycle();
   resultsArea.classList.remove('visible');
 
   const systemPrompt = `You are an expert chess coach. Analyse PGN chess games for a specific player and return a JSON report.
-
 RULES:
 - Return ONLY valid JSON. No markdown, no code fences, no preamble, no trailing text.
 - Every field is optional — only include what you can confidently determine. Never invent data.
-- "lines": MUST contain move sequences from the actual games showing better continuations. If no variations exist in the PGN, derive lines from the moves played and identify the critical moment where a different move would have helped.
+- "lines": MUST contain move sequences from the actual games showing better continuations. If no variations exist, derive lines from moves played and identify the critical moment where a different move would have helped.
 - "openings": identify by the first 4-8 moves. Use ECO names if recognisable, otherwise describe (e.g. "King's Pawn Game", "London System", "French Defence").
 - "issues": patterns across multiple games where possible; for a single game, the key mistakes. Reference move numbers.
 - "summary": warm, direct coaching voice — not a bullet-point report.
-
 JSON structure:
-{
-  "player": "string",
-  "totalGames": number,
-  "wins": number,
-  "losses": number,
-  "draws": number,
-  "gamesAsWhite": number,
-  "gamesAsBlack": number,
-  "openings": [{ "name": "string", "color": "White or Black", "count": number }],
-  "issues": ["specific issue description"],
-  "lines": [{ "context": "short label", "moves": "1.e4 e5 ...", "explanation": "what went wrong and what to do" }],
-  "summary": "2-3 paragraph coach narrative"
-}`;
+{"player":"string","totalGames":number,"wins":number,"losses":number,"draws":number,"gamesAsWhite":number,"gamesAsBlack":number,"openings":[{"name":"string","color":"White or Black","count":number}],"issues":["specific issue description"],"lines":[{"context":"short label","moves":"1.e4 e5 ...","explanation":"what went wrong and what to do"}],"summary":"2-3 paragraph coach narrative"}`;
 
   const userPrompt = `PGN source: ${format}
-${annotated ? 'Games include Stockfish annotations — use eval scores to pinpoint mistakes.' : 'Plain PGN, no engine annotations — analyse move choices directly.'}
+${annotated?'Games include Stockfish annotations — use eval scores to pinpoint mistakes.':'Plain PGN, no engine annotations — analyse move choices directly.'}
 Total games: ${totalGames}
-${player ? `Player under review: ${player} (${asWhite} as White, ${asBlack} as Black)` : 'No usernames — treat White as the player in each game.'}
+${player?`Player under review: ${player} (${asWhite} as White, ${asBlack} as Black)`:'No usernames — treat White as the player in each game.'}
 
 Games (annotations stripped):
-
 ${cleanPGN}
-
-${annotated ? `\nAnnotated original for reference:\n${rawPGN.substring(0,6000)}` : ''}
+${annotated?`\nAnnotated original for reference:\n${rawPGN.substring(0,6000)}`:''}
 
 Return the JSON report.`;
 
   try {
-    const resp = await fetch(proxyURL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const resp = await fetch(API, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
+        model:'claude-sonnet-4-20250514',
+        max_tokens:4000,
         system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
+        messages:[{role:'user',content:userPrompt}]
       })
     });
 
     if (!resp.ok) {
       const err = await resp.json().catch(()=>({}));
-      throw new Error(err.error?.message || `Worker returned HTTP ${resp.status}. Check that your Worker URL is correct and the ANTHROPIC_API_KEY secret is set.`);
+      throw new Error(err.error?.message || `Server error ${resp.status}`);
     }
 
     const data = await resp.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
 
-    const raw = data.content.map(b => b.text||'').join('');
+    const raw = data.content.map(b=>b.text||'').join('');
     let parsed;
     for (const fn of [
       ()=>JSON.parse(raw.trim()),
@@ -564,15 +440,15 @@ Return the JSON report.`;
       ()=>{ const m=raw.match(/\{[\s\S]+\}/); if(m) return JSON.parse(m[0]); throw new Error('no json'); }
     ]) { try{ parsed=fn(); break; } catch(e){} }
 
-    if (!parsed) throw new Error('Could not parse the analysis response. The model may have returned unexpected output — please try again.');
+    if (!parsed) throw new Error('Could not parse analysis response — please try again.');
 
     stopLoadingCycle();
     renderResults(parsed);
   } catch(err) {
     stopLoadingCycle();
-    showError('Analysis failed: ' + (err.message || 'Unknown error. Please try again.'));
+    showError('Analysis failed: '+(err.message||'Unknown error. Please try again.'));
   } finally {
-    analyzeBtn.disabled = false;
+    analyzeBtn.disabled=false;
   }
 });
 </script>
