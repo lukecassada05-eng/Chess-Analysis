@@ -619,101 +619,91 @@ function ecoFam(eco){
   if(!eco)return'Unknown';
   return{A:'A: Flank/Irregular',B:'B: Semi-Open (1.e4)',C:'C: Open (1.e4 e5)',D:'D: Closed (1.d4)',E:'E: Indian Defenses'}[eco[0]]||'Unknown';
 }
-const SKIP=new Set(['?','anonymous','guest','lichess ai','stockfish']);
+const SKIP=new Set(['?','anonymous','guest','lichess ai','stockfish','?']);
 
 // ── PLAYER DETECTION ─────────────────────────────────────────────────────────
-// Returns an object { primary, aliases } where aliases is a Set of all
-// lowercase names that belong to the same person.
-//
-// How it works:
-// 1. Count every name across all White/Black headers
-// 2. Pick the most frequent name as primary
-// 3. Find any other name that *always appears on the opposite side* of the
-//    primary name — meaning they are always opponents of each other.
-//    That pattern means they are the SAME person (e.g. online username vs
-//    real name in over-the-board games mixed together).
-// 4. Also include names that never appear against the primary (never opponents)
-//    and appear frequently — another signal they may be the same person
-//    playing in a different event format.
-//
-// Net result: if your PGN has some games with "Antarez2014" and some with
-// "Luke Cassada", both get detected as the same player automatically.
-
+// Algorithm:
+// 1. Find the most frequent name across all White/Black headers → that's the player
+// 2. Remove all games where that name appears → remaining pool
+// 3. Find the most frequent name in the remaining pool → same player, different name
+// 4. Repeat until pool is empty
+// This handles: username + real name, chess.com + lichess + OTB mixed together
 function detectPlayer(games){
-  const freq={};
-  games.forEach(g=>[g.white,g.black].forEach(n=>{
-    const k=n.trim().toLowerCase();
-    if(k&&!SKIP.has(k))freq[n]=(freq[n]||0)+1;
-  }));
-  const sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
-  if(!sorted.length)return{primary:null,aliases:new Set()};
+  let pool=[...games];
+  const aliases=new Set();
+  let primary=null;
 
-  const primary=sorted[0][0];
-  const pl=primary.toLowerCase();
-  const aliases=new Set([pl]);
+  while(pool.length>0){
+    // Count all names in current pool
+    const freq={};
+    pool.forEach(g=>[g.white,g.black].forEach(n=>{
+      const k=n.trim().toLowerCase();
+      if(k&&!SKIP.has(k)) freq[n]=(freq[n]||0)+1;
+    }));
+    const sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+    if(!sorted.length) break;
 
-  // For every other frequent name, check if it could be the same person:
-  // same person = they are never on the same side as primary in a game,
-  // i.e. every game they share has primary on one color and candidate on the other.
-  sorted.slice(1).forEach(([name])=>{
-    const k=name.trim().toLowerCase();
-    if(SKIP.has(k))return;
-    // Find games where both primary and this name appear
-    const shared=games.filter(g=>{
-      const w=g.white.toLowerCase(),b=g.black.toLowerCase();
-      return (w===pl||b===pl)&&(w===k||b===k);
-    });
-    if(shared.length===0){
-      // Never played each other — could be same person in different event format
-      // Include if they appear in at least 2 games
-      if(freq[name]>=2) aliases.add(k);
-    } else {
-      // Check they are always on opposite sides (same person switching colors)
-      const alwaysOpposite=shared.every(g=>{
-        const w=g.white.toLowerCase(),b=g.black.toLowerCase();
-        return (w===pl&&b===k)||(b===pl&&w===k);
-      });
-      if(alwaysOpposite) aliases.add(k);
-    }
-  });
+    const [topName]=sorted[0];
+    const topKey=topName.trim().toLowerCase();
 
-  return{primary,aliases};
+    if(!primary) primary=topName;
+    aliases.add(topKey);
+
+    // Remove all games where this name appears as White or Black
+    pool=pool.filter(g=>
+      g.white.trim().toLowerCase()!==topKey &&
+      g.black.trim().toLowerCase()!==topKey
+    );
+  }
+
+  return { primary, aliases };
 }
 
-function enrich(games,playerInfo){
-  // playerInfo can be a string (legacy) or {primary, aliases}
+// ── ENRICH GAMES ─────────────────────────────────────────────────────────────
+// Matches every game where any of the player's aliases appears as White or Black.
+// Works correctly for both colors.
+function enrich(games, playerInfo){
   let primary, aliases;
   if(typeof playerInfo==='string'){
     primary=playerInfo;
-    aliases=new Set([playerInfo.toLowerCase()]);
+    aliases=new Set([playerInfo.trim().toLowerCase()]);
   } else {
     primary=playerInfo.primary;
     aliases=playerInfo.aliases;
   }
 
-  // Collect all display names that belong to the player (for labelling)
-  const allPlayerNames=[...aliases];
-
   return games.map(g=>{
-    const w=g.white.toLowerCase(),b=g.black.toLowerCase();
-    const isWhite=aliases.has(w);
-    const isBlack=aliases.has(b);
-    if(!isWhite&&!isBlack)return null;
-    // If somehow both sides match (shouldn't happen), prefer White
-    const color=isWhite?'White':'Black';
+    const wKey=g.white.trim().toLowerCase();
+    const bKey=g.black.trim().toLowerCase();
+    const isWhite=aliases.has(wKey);
+    const isBlack=aliases.has(bKey);
+
+    // Skip games where neither side is the player
+    if(!isWhite && !isBlack) return null;
+
+    const color=isWhite ? 'White' : 'Black';
     let uElo,oElo,uAcc,opp;
-    if(color==='White'){uElo=g.wElo;oElo=g.bElo;uAcc=g.wAcc;opp=g.black;}
-    else{uElo=g.bElo;oElo=g.wElo;uAcc=g.bAcc;opp=g.white;}
-    const outcome=color==='White'
-      ?g.result==='white'?'Win':g.result==='draw'?'Draw':g.result==='black'?'Loss':null
-      :g.result==='black'?'Win':g.result==='draw'?'Draw':g.result==='white'?'Loss':null;
-    if(!outcome)return null;
+    if(color==='White'){
+      uElo=g.wElo; oElo=g.bElo; uAcc=g.wAcc; opp=g.black;
+    } else {
+      uElo=g.bElo; oElo=g.wElo; uAcc=g.bAcc; opp=g.white;
+    }
+
+    const outcome = color==='White'
+      ? (g.result==='white'?'Win':g.result==='draw'?'Draw':g.result==='black'?'Loss':null)
+      : (g.result==='black'?'Win':g.result==='draw'?'Draw':g.result==='white'?'Loss':null);
+
+    if(!outcome) return null;
+
     const score=outcome==='Win'?1:outcome==='Draw'?0.5:0;
     const rDiff=(uElo&&oElo)?uElo-oElo:null;
     const expScore=rDiff!==null?1/(1+Math.pow(10,-rDiff/400)):null;
     const sVsE=expScore!==null?score-expScore:null;
     const first8=g.moveList.slice(0,8);
-    const playerMoves=color==='White'?first8.filter((_,i)=>i%2===0):first8.filter((_,i)=>i%2!==0);
+    const playerMoves=color==='White'
+      ? first8.filter((_,i)=>i%2===0)
+      : first8.filter((_,i)=>i%2!==0);
+
     return{...g,color,outcome,score,uElo,oElo,uAcc,opp,rDiff,expScore,sVsE,playerMoves};
   }).filter(Boolean);
 }
