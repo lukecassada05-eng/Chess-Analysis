@@ -134,6 +134,32 @@ textarea::placeholder{color:var(--ink-mute);}
 .footer-note{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-mute);margin-top:40px;padding-top:22px;border-top:1px solid var(--border);}
 @media print{.board-pattern,.input-section,.btn-print,.controls-row,.filters-row,.pgn-info,.error-box,.move-nav,.game-list{display:none!important;}.site-wrapper{padding:0;}.results-area{display:block!important;}.section-card,.coach-card{box-shadow:none;break-inside:avoid;}body{background:white;}}
 @media(max-width:640px){.chart-grid{grid-template-columns:1fr;}.chart-box.full,.chart-box.xtall{grid-column:auto;}h1{font-size:1.7rem;}.stats-row{grid-template-columns:repeat(3,1fr);}.chess-board{grid-template-columns:repeat(8,38px);grid-template-rows:repeat(8,38px);}.sq{width:38px;height:38px;}.piece{font-size:26px;}.board-coords-file{grid-template-columns:repeat(8,38px);}.board-coords-rank{grid-template-rows:repeat(8,38px);}}
+
+/* ── Opening Explorer ────────────────────────────────────────────────────── */
+.explorer-wrap{display:flex;gap:0;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;min-height:320px;}
+.explorer-col{flex:1;border-right:1px solid var(--border-strong);display:flex;flex-direction:column;min-width:0;}
+.explorer-col:last-child{border-right:none;}
+.explorer-col-head{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-mute);padding:8px 12px;background:var(--ivory);border-bottom:1px solid var(--border);flex-shrink:0;}
+.explorer-list{overflow-y:auto;flex:1;}
+.exp-item{padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s;}
+.exp-item:last-child{border-bottom:none;}
+.exp-item:hover{background:var(--cream);}
+.exp-item.selected{background:var(--ink);color:white;}
+.exp-item.selected .exp-name{color:white;}
+.exp-item.selected .exp-bar-w{opacity:0.9;}
+.exp-name{font-size:0.84rem;flex:1;line-height:1.3;font-family:'Source Serif 4',serif;}
+.exp-meta{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-mute);white-space:nowrap;flex-shrink:0;}
+.exp-item.selected .exp-meta{color:rgba(255,255,255,0.6);}
+.exp-bar{display:flex;height:5px;border-radius:3px;overflow:hidden;width:50px;flex-shrink:0;}
+.exp-detail{padding:16px;background:white;overflow-y:auto;}
+.exp-detail h4{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:700;margin-bottom:10px;color:var(--ink);}
+.exp-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.exp-stat{background:var(--ivory);border-radius:6px;padding:8px 10px;text-align:center;}
+.exp-stat-val{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;line-height:1;}
+.exp-stat-lbl{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-mute);text-transform:uppercase;margin-top:2px;}
+.exp-tip{font-size:0.84rem;color:var(--ink-soft);line-height:1.6;background:var(--gold-soft);border-radius:6px;padding:10px 13px;border-left:3px solid var(--brown);}
+.exp-empty{padding:20px;font-size:0.84rem;color:var(--ink-mute);font-style:italic;}
+@media(max-width:640px){.explorer-wrap{flex-direction:column;}.explorer-col{border-right:none;border-bottom:1px solid var(--border-strong);min-height:150px;}.explorer-col:last-child{border-bottom:none;}}
 </style>
 </head>
 <body>
@@ -301,10 +327,34 @@ textarea::placeholder{color:var(--ink-mute);}
     </div>
 
     <div class="section-card">
-      <div class="section-head"><div class="section-icon" style="background:var(--teal-soft)">♜</div><div class="section-title">Opening Performance</div></div>
+      <div class="section-head"><div class="section-icon" style="background:var(--teal-soft)">♜</div><div class="section-title">Opening Explorer</div></div>
       <div class="section-body">
-        <div class="chart-grid" style="margin-bottom:16px;"><div class="chart-box xtall"><canvas id="chart-openings"></canvas></div></div>
-        <div id="opening-table-wrap"></div>
+        <p style="font-size:0.86rem;color:var(--ink-mute);margin-bottom:14px;">Click a family to drill down into variations. The detail panel shows your stats and a coaching tip for that opening.</p>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+          <div class="filter-group"><label>Color</label><select class="filter-select" id="exp-color" onchange="renderExplorer()"><option value="all">All</option><option value="White">White</option><option value="Black">Black</option></select></div>
+        </div>
+        <div class="explorer-wrap" id="explorer-wrap">
+          <div class="explorer-col" id="exp-col-family">
+            <div class="explorer-col-head">Opening Family</div>
+            <div class="explorer-list" id="exp-list-family"></div>
+          </div>
+          <div class="explorer-col" id="exp-col-opening">
+            <div class="explorer-col-head">Opening</div>
+            <div class="explorer-list" id="exp-list-opening"><div class="exp-empty">← Select a family</div></div>
+          </div>
+          <div class="explorer-col" id="exp-col-variation">
+            <div class="explorer-col-head">Variation</div>
+            <div class="explorer-list" id="exp-list-variation"><div class="exp-empty">← Select an opening</div></div>
+          </div>
+          <div class="explorer-col" style="flex:1.4;" id="exp-col-detail">
+            <div class="explorer-col-head">Detail</div>
+            <div class="exp-detail" id="exp-detail"><div class="exp-empty">Select an opening to see your stats.</div></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="chart-grid"><div class="chart-box full"><canvas id="chart-openings"></canvas></div></div>
+          <div id="opening-table-wrap" style="margin-top:14px;"></div>
+        </div>
       </div>
     </div>
 
@@ -384,15 +434,181 @@ function parseOne(text){
   const ds=(H.Date||H.UTCDate||'').replace(/\./g,'-');
   const gameDate=ds.match(/\d{4}-\d{2}-\d{2}/)?new Date(ds):null;
   let openingName='Unknown';
-  if(H.ECOUrl){const sl=H.ECOUrl.split('/').pop()||'';openingName=sl.split('-').slice(0,4).map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')||'Unknown';}
-  else if(H.Opening)openingName=H.Opening.split(':')[0].trim();
-  else if(H.ECO)openingName=ecoFam(H.ECO);
+  if(H.Opening){
+    // Full Opening header e.g. 'Sicilian Defense: Najdorf Variation, English Attack'
+    const full=H.Opening.trim();
+    openingName=(H.Variation?full+': '+H.Variation.trim():full).slice(0,80);
+  } else if(H.ECOUrl){
+    // Full slug e.g. ruy-lopez-morphy-defense-archangel-variation
+    const sl=(H.ECOUrl.split('/').pop()||'').replace(/-/g,' ');
+    openingName=sl.replace(/\b\w/g,c=>c.toUpperCase()).slice(0,80)||'Unknown';
+  } else if(H.ECO){
+    openingName=ecoFam(H.ECO);
+  } else {
+    openingName=detectOpeningByMoves(tokens);
+  }
   return{white:H.White||'?',black:H.Black||'?',result:pgRes,
     wElo:parseInt(H.WhiteElo)||null,bElo:parseInt(H.BlackElo)||null,
     eco:H.ECO||'',openingName,tcLabel:tc.label,tcCat:tc.cat,
     nMoves:tokens.length,moveList:tokens.slice(),gameDate,
     wAcc,bAcc,blunders,mistakes,inaccs};
 }
+
+// ── MOVE-BASED OPENING DETECTION (fallback for plain PGNs) ───────────────────
+function detectOpeningByMoves(tokens){
+  if(!tokens||tokens.length<2)return'Unknown';
+  const m=tokens; // shorthand
+  const mv=(n)=>m[n]||'';
+  // Helper: match opening by first moves sequence
+  const seq=tokens.slice(0,8).join(' ');
+  // e4 openings
+  if(mv(0)==='e4'){
+    if(mv(1)==='e5'){
+      if(mv(2)==='Nf3'){
+        if(mv(3)==='Nc6'){
+          if(mv(4)==='Bb5') return mv(5)==='a6'?mv(6)==='Ba4'?'Ruy Lopez: Morphy Defense':'Ruy Lopez':'Ruy Lopez';
+          if(mv(4)==='Bc4') return mv(5)==='Bc5'?'Giuoco Piano':mv(5)==='Nf6'?'Two Knights Defense':'Italian Game';
+          if(mv(4)==='d4') return 'Scotch Game';
+          if(mv(4)==='Nc3') return mv(5)==='Nf6'?'Four Knights Game':'Three Knights Game';
+          if(mv(4)==='f4') return "King's Gambit Declined: Falkbeer";
+          return 'Open Game';
+        }
+        if(mv(3)==='Nf6') return 'Petrov Defense';
+        if(mv(3)==='d6') return mv(4)==='d4'?'Philidor Defense':'Philidor Defense';
+        if(mv(3)==='f5') return 'Latvian Gambit';
+        return 'Open Game';
+      }
+      if(mv(2)==='f4') return mv(3)==='d5'?"King's Gambit Declined":mv(3)==='exf4'?"King's Gambit Accepted":"King's Gambit";
+      if(mv(2)==='Nc3') return mv(3)==='Nc6'?mv(4)==='f4'?'Vienna Gambit':'Vienna Game':'Vienna Game';
+      if(mv(2)==='d4') return mv(3)==='exd4'?mv(4)==='Qxd4'?'Center Game':'Scots Gambit':'Center Game';
+      return 'Open Game';
+    }
+    if(mv(1)==='c5'){
+      if(mv(2)==='Nf3'){
+        if(mv(3)==='d6') return mv(4)==='d4'?mv(5)==='cxd4'?mv(6)==='Nxd4'?mv(7)==='Nf6'?'Sicilian: Najdorf':'Sicilian: Classical':'Sicilian: Dragon':'Sicilian: Najdorf':'Sicilian Defense';
+        if(mv(3)==='Nc6') return mv(4)==='d4'?'Sicilian: Classical Variation':'Sicilian Defense';
+        if(mv(3)==='e6') return mv(4)==='d4'?'Sicilian: Kan/Taimanov':'Sicilian Defense';
+        if(mv(3)==='g6') return 'Sicilian: Accelerated Dragon';
+        if(mv(3)==='a6') return "Sicilian: O'Kelly Variation";
+        return 'Sicilian Defense';
+      }
+      if(mv(2)==='c3') return 'Sicilian: Alapin Variation';
+      if(mv(2)==='Nc3') return mv(3)==='Nc6'?'Sicilian: Closed':'Sicilian: Closed';
+      if(mv(2)==='d4') return 'Sicilian: Smith-Morra Gambit';
+      if(mv(2)==='f4') return 'Sicilian: Grand Prix Attack';
+      return 'Sicilian Defense';
+    }
+    if(mv(1)==='e6'){
+      if(mv(2)==='d4'){
+        if(mv(3)==='d5'){
+          if(mv(4)==='Nc3') return mv(5)==='Bb4'?'French: Winawer':'French: Classical';
+          if(mv(4)==='Nd2') return 'French: Tarrasch';
+          if(mv(4)==='e5') return 'French: Advance';
+          if(mv(4)==='exd5') return 'French: Exchange';
+          return 'French Defense';
+        }
+        return 'French Defense';
+      }
+      return 'French Defense';
+    }
+    if(mv(1)==='c6'){
+      if(mv(2)==='d4'&&mv(3)==='d5'){
+        if(mv(4)==='Nc3') return mv(5)==='dxe4'?'Caro-Kann: Classical':'Caro-Kann: Classical';
+        if(mv(4)==='Nd2') return 'Caro-Kann: Karpov Variation';
+        if(mv(4)==='e5') return 'Caro-Kann: Advance';
+        if(mv(4)==='exd5') return 'Caro-Kann: Exchange';
+        return 'Caro-Kann Defense';
+      }
+      return 'Caro-Kann Defense';
+    }
+    if(mv(1)==='d5'){
+      if(mv(2)==='exd5') return mv(3)==='Qxd5'?'Scandinavian: Main Line':mv(3)==='Nf6'?'Scandinavian: Marshall Gambit':'Scandinavian Defense';
+      return 'Scandinavian Defense';
+    }
+    if(mv(1)==='g6') return mv(2)==='d4'?mv(3)==='Bg7'?'Modern Defense':'Modern Defense':'Modern Defense';
+    if(mv(1)==='d6') return mv(2)==='d4'?'Pirc Defense':'Pirc Defense';
+    if(mv(1)==='Nf6') return mv(2)==='e5'?'Alekhine Defense':'Alekhine Defense';
+    if(mv(1)==='b6') return 'Owen Defense';
+    if(mv(1)==='Nc6') return 'Nimzowitsch Defense';
+    return "King's Pawn Game (1.e4)";
+  }
+  // d4 openings
+  if(mv(0)==='d4'){
+    if(mv(1)==='d5'){
+      if(mv(2)==='c4'){
+        if(mv(3)==='e6') return mv(4)==='Nc3'?mv(5)==='Nf6'?"Queen's Gambit Declined: Orthodox":"Queen's Gambit Declined":"Queen's Gambit Declined";
+        if(mv(3)==='c6') return mv(4)==='Nf3'?'Slav Defense':'Slav Defense';
+        if(mv(3)==='dxc4') return mv(4)==='Nf3'?mv(5)==='Nf6'?"Queen's Gambit Accepted":"Queen's Gambit Accepted":"Queen's Gambit Accepted";
+        if(mv(3)==='Nf6') return "Queen's Gambit Declined: Chigorin";
+        if(mv(3)==='Nc6') return "Queen's Gambit: Chigorin";
+        return "Queen's Gambit";
+      }
+      if(mv(2)==='Nf3') return mv(3)==='Nf6'?mv(4)==='e3'?'London System':"Queen's Pawn Game":"Queen's Pawn Game";
+      if(mv(2)==='Bf4') return 'London System';
+      if(mv(2)==='e3') return 'London System';
+      return "Queen's Pawn Game";
+    }
+    if(mv(1)==='Nf6'){
+      if(mv(2)==='c4'){
+        if(mv(3)==='e6'){
+          if(mv(4)==='Nc3') return mv(5)==='Bb4'?"Nimzo-Indian Defense":mv(5)==='d5'?"Queen's Gambit Declined":"Nimzo-Indian Defense";
+          if(mv(4)==='Nf3') return mv(5)==='b6'?"Queen's Indian Defense":mv(5)==='Bb4'?'Bogo-Indian Defense':'Indian Defense';
+          return 'Indian Defense';
+        }
+        if(mv(3)==='g6'){
+          if(mv(4)==='Nc3') return mv(5)==='Bg7'?mv(6)==='e4'?"King's Indian Defense":"King's Indian Defense":"King's Indian Defense";
+          if(mv(4)==='Nf3') return mv(5)==='Bg7'?"King's Indian Defense":"King's Indian Defense";
+          return "King's Indian Defense";
+        }
+        if(mv(3)==='d5') return 'Grünfeld Defense';
+        if(mv(3)==='c5') return 'Benoni Defense';
+        return 'Indian Defense';
+      }
+      if(mv(2)==='Nf3') return mv(3)==='e6'?'Torre Attack':mv(3)==='g6'?"King's Indian Attack":"Queen's Pawn Game";
+      if(mv(2)==='Bg5') return 'Trompowsky Attack';
+      if(mv(2)==='Bf4') return 'London System';
+      return 'Indian Defense';
+    }
+    if(mv(1)==='e6') return mv(2)==='c4'?'English: Anglo-French':"Queen's Pawn Game";
+    if(mv(1)==='f5') return mv(2)==='c4'?'Dutch Defense: Staunton Gambit':mv(2)==='Nf3'?'Dutch Defense':'Dutch Defense';
+    if(mv(1)==='c5') return mv(2)==='d5'?'Benoni Defense':mv(2)==='Nf3'?'Symmetrical English':'Old Benoni';
+    if(mv(1)==='g6') return 'Modern Defense';
+    if(mv(1)==='d6') return 'Old Indian Defense';
+    if(mv(1)==='c6') return 'Slav-like: 1...c6';
+    if(mv(1)==='b6') return 'English Defense';
+    return "Queen's Pawn Game (1.d4)";
+  }
+  // c4 openings
+  if(mv(0)==='c4'){
+    if(mv(1)==='e5') return 'English: Reversed Sicilian';
+    if(mv(1)==='c5') return 'Symmetrical English';
+    if(mv(1)==='Nf6') return mv(2)==='Nc3'?mv(3)==='g6'?"King's Indian Attack":'English Opening':'English Opening';
+    if(mv(1)==='e6') return 'English: Anglo-Indian';
+    if(mv(1)==='g6') return "English: King's Indian";
+    if(mv(1)==='c6') return 'English: Caro-Kann Defense';
+    if(mv(1)==='f5') return 'English: Dutch Defense';
+    return 'English Opening';
+  }
+  // Nf3 openings
+  if(mv(0)==='Nf3'){
+    if(mv(1)==='d5') return mv(2)==='g3'?'Réti Opening':'Réti Opening';
+    if(mv(1)==='Nf6') return mv(2)==='g3'?"King's Indian Attack":'Réti Opening';
+    if(mv(1)==='c5') return 'Réti: Sicilian Invitation';
+    if(mv(1)==='f5') return 'Réti vs Dutch';
+    return 'Réti Opening';
+  }
+  // Other first moves
+  if(mv(0)==='g3') return "King's Fianchetto Opening";
+  if(mv(0)==='b3') return 'Nimzowitsch-Larsen Attack';
+  if(mv(0)==='b4') return 'Polish Opening';
+  if(mv(0)==='f4') return mv(1)==='d5'?"Bird's Opening":mv(1)==='e5'?"Bird's Opening: From's Gambit":"Bird's Opening";
+  if(mv(0)==='e3') return "Van't Kruijs Opening";
+  if(mv(0)==='d3') return "King's Indian Attack Setup";
+  if(mv(0)==='Nc3') return 'Van Geet Opening';
+  if(mv(0)==='a3') return "Anderssen's Opening";
+  return 'Unknown';
+}
+
 function parseTC(tc){
   if(!tc||tc==='-')return{label:'Unknown',cat:'Unknown'};
   const p=tc.split('+'),base=parseInt(p[0])||0,inc=p[1]?parseInt(p[1]):0,tot=base+40*inc;
@@ -524,6 +740,7 @@ function renderAll(games){
   renderDeviation(games);
   renderConsistency(games);
   renderGaps(games);
+  renderExplorer();
   renderOpeningsChart(games);
   renderOpeningTable(games);
   renderEcoHeatmap(games);
@@ -929,6 +1146,229 @@ function renderGaps(games){
     html+='</div>';
   });
   document.getElementById('gaps-body').innerHTML=html||'<p style="color:var(--ink-mute);font-size:0.86rem;">Not enough games to detect gaps.</p>';
+}
+
+
+// ── OPENING EXPLORER (drill-down: Family → Opening → Variation → Detail) ─────
+
+// Map opening names to families and sub-openings
+const FAMILY_MAP = [
+  { family:'Sicilian Defense',    match:/^Sicilian/i },
+  { family:'French Defense',      match:/^French/i },
+  { family:'Caro-Kann Defense',   match:/^Caro.Kann/i },
+  { family:'Ruy Lopez',           match:/^Ruy Lopez|^Spanish/i },
+  { family:'Italian Game',        match:/^Italian|^Giuoco/i },
+  { family:'Scotch Game',         match:/^Scotch/i },
+  { family:"King's Gambit",      match:/^King.s Gambit/i },
+  { family:'Petrov Defense',      match:/^Petrov/i },
+  { family:'Vienna Game',         match:/^Vienna/i },
+  { family:'Scandinavian Defense',match:/^Scandinavian/i },
+  { family:'Alekhine Defense',    match:/^Alekhine/i },
+  { family:'Pirc Defense',        match:/^Pirc|^Modern Defense/i },
+  { family:"Queen's Gambit",     match:/^Queen.s Gambit/i },
+  { family:"King's Indian Defense",match:/^King.s Indian/i },
+  { family:"Nimzo-Indian Defense",match:/^Nimzo.Indian/i },
+  { family:"Queen's Indian Defense",match:/^Queen.s Indian/i },
+  { family:'Grünfeld Defense',    match:/^Gr.nfeld/i },
+  { family:'Slav Defense',        match:/^Slav/i },
+  { family:'Dutch Defense',       match:/^Dutch/i },
+  { family:'Benoni Defense',      match:/^Benoni/i },
+  { family:'English Opening',     match:/^English/i },
+  { family:'Réti Opening',        match:/^R.ti|^Reti/i },
+  { family:'London System',       match:/^London/i },
+  { family:"King's Pawn (Other)",match:/^King.s Pawn|^Open Game|^Center/i },
+  { family:"Queen's Pawn (Other)",match:/^Queen.s Pawn/i },
+  { family:"Bird's Opening",     match:/^Bird/i },
+  { family:'Other',               match:/./ },
+];
+
+function getFamilyFor(name){
+  for(const f of FAMILY_MAP){if(f.match.test(name))return f.family;}
+  return 'Other';
+}
+
+// Split full opening name into [opening, variation]
+// e.g. "Sicilian Defense: Najdorf Variation, English Attack"
+//   -> opening="Sicilian Defense: Najdorf Variation", variation="English Attack"
+// e.g. "Sicilian Defense: Najdorf Variation"
+//   -> opening="Sicilian Defense", variation="Najdorf Variation"
+// e.g. "Sicilian Defense"
+//   -> opening="Sicilian Defense", variation=null
+function splitOpeningVariation(name){
+  // If name has a colon, split there
+  const colon = name.indexOf(':');
+  if(colon>0){
+    const base = name.slice(0,colon).trim();           // e.g. "Sicilian Defense"
+    const rest = name.slice(colon+1).trim();           // e.g. "Najdorf Variation, English Attack"
+    const comma = rest.indexOf(',');
+    if(comma>0){
+      return {
+        opening: base+': '+rest.slice(0,comma).trim(), // "Sicilian Defense: Najdorf Variation"
+        variation: rest.slice(comma+1).trim()           // "English Attack"
+      };
+    }
+    return { opening: base, variation: rest };         // "Sicilian Defense", "Najdorf Variation"
+  }
+  return { opening: name, variation: null };
+}
+
+// Build nested data structure from games
+function buildExplorerData(games, colorFilter){
+  const filtered = colorFilter==='all' ? games : games.filter(g=>g.color===colorFilter);
+  // families -> openings -> variations -> games
+  const tree = {};
+  filtered.forEach(g=>{
+    const family = getFamilyFor(g.openingName);
+    const {opening, variation} = splitOpeningVariation(g.openingName);
+    const varKey = variation || '(Main Line)';
+    if(!tree[family]) tree[family]={games:[],openings:{}};
+    tree[family].games.push(g);
+    if(!tree[family].openings[opening]) tree[family].openings[opening]={games:[],variations:{}};
+    tree[family].openings[opening].games.push(g);
+    if(!tree[family].openings[opening].variations[varKey]) tree[family].openings[opening].variations[varKey]={games:[]};
+    tree[family].openings[opening].variations[varKey].games.push(g);
+  });
+  return tree;
+}
+
+function calcStats(games){
+  const t=games.length,w=games.filter(g=>g.outcome==='Win').length,d=games.filter(g=>g.outcome==='Draw').length,l=games.filter(g=>g.outcome==='Loss').length;
+  const sp=t?Math.round(100*(w+0.5*d)/t):0;
+  const eG=games.filter(g=>g.sVsE!==null);
+  const vsElo=eG.length?(100*eG.reduce((s,g)=>s+g.sVsE,0)/eG.length).toFixed(1):null;
+  return{t,w,d,l,sp,vsElo};
+}
+
+function statsBar(w,d,l){
+  const t=w+d+l;if(!t)return'';
+  return`<div class="exp-bar"><span style="flex:${w};background:#27ae60;"></span><span style="flex:${d};background:#f39c12;"></span><span style="flex:${l};background:#c0392b;"></span></div>`;
+}
+
+function coachTip(name, stats){
+  const {t,sp,vsElo} = stats;
+  if(t<2) return `Only ${t} game${t===1?'':'s'} in this opening — need more data to draw conclusions.`;
+  const vs = vsElo!==null ? parseFloat(vsElo) : null;
+  if(sp>=65) return `Strong result in ${name}! Your ${sp}% score here is above average. Consider making this a core part of your repertoire.`;
+  if(sp>=50&&vs!==null&&vs>3) return `Solid performance in ${name} — you're outperforming your Elo expectation by ${vs}%. Keep playing this line.`;
+  if(sp<40) return `${name} is a weak spot — only ${sp}% score across ${t} games. Study the key ideas and typical middlegame plans, or consider switching variations.`;
+  if(vs!==null&&vs<-5) return `You score ${sp}% here but underperform your Elo by ${Math.abs(vs)}%. You're losing games you should be winning in this opening.`;
+  return `Decent results in ${name} (${sp}% across ${t} games). Review your critical games here to find where things go wrong.`;
+}
+
+// State for the explorer
+let EXP = { tree:{}, family:null, opening:null, variation:null };
+
+function renderExplorer(){
+  const color = document.getElementById('exp-color')?.value || 'all';
+  EXP.tree = buildExplorerData(FILTERED, color);
+  EXP.family = null; EXP.opening = null; EXP.variation = null;
+  renderExpFamily();
+  document.getElementById('exp-list-opening').innerHTML='<div class="exp-empty">← Select a family</div>';
+  document.getElementById('exp-list-variation').innerHTML='<div class="exp-empty">← Select an opening</div>';
+  document.getElementById('exp-detail').innerHTML='<div class="exp-empty">Select an opening to see your stats.</div>';
+}
+
+function renderExpFamily(){
+  const families = Object.entries(EXP.tree)
+    .map(([name,data])=>({name, ...calcStats(data.games)}))
+    .filter(x=>x.t>0)
+    .sort((a,b)=>b.t-a.t);
+
+  document.getElementById('exp-list-family').innerHTML = families.map(f=>`
+    <div class="exp-item${EXP.family===f.name?' selected':''}" onclick="selectFamily('${f.name.replace(/'/g,"\\'")}')">
+      <div style="flex:1;min-width:0;">
+        <div class="exp-name">${f.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">${statsBar(f.w,f.d,f.l)}<span class="exp-meta">${f.sp}% · ${f.t}g</span></div>
+      </div>
+    </div>`).join('');
+}
+
+window.selectFamily = function(family){
+  EXP.family=family; EXP.opening=null; EXP.variation=null;
+  renderExpFamily();
+  const data=EXP.tree[family];
+  if(!data){return;}
+  const openings=Object.entries(data.openings)
+    .map(([name,d])=>({name,...calcStats(d.games)}))
+    .sort((a,b)=>b.t-a.t);
+
+  document.getElementById('exp-list-opening').innerHTML=openings.map(o=>`
+    <div class="exp-item${EXP.opening===o.name?' selected':''}" onclick="selectOpening('${o.name.replace(/'/g,"\\'").replace(/\n/g,'')}')">
+      <div style="flex:1;min-width:0;">
+        <div class="exp-name">${o.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">${statsBar(o.w,o.d,o.l)}<span class="exp-meta">${o.sp}% · ${o.t}g</span></div>
+      </div>
+    </div>`).join('') || '<div class="exp-empty">No openings found.</div>';
+
+  document.getElementById('exp-list-variation').innerHTML='<div class="exp-empty">← Select an opening</div>';
+  renderExpDetail(family, calcStats(data.games));
+};
+
+window.selectOpening = function(opening){
+  EXP.opening=opening; EXP.variation=null;
+  // re-render opening list to show selection
+  const famData=EXP.tree[EXP.family];
+  if(!famData)return;
+  const openings=Object.entries(famData.openings).map(([name,d])=>({name,...calcStats(d.games)})).sort((a,b)=>b.t-a.t);
+  document.getElementById('exp-list-opening').innerHTML=openings.map(o=>`
+    <div class="exp-item${EXP.opening===o.name?' selected':''}" onclick="selectOpening('${o.name.replace(/'/g,"\\'").replace(/\n/g,'')}')">
+      <div style="flex:1;min-width:0;">
+        <div class="exp-name">${o.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">${statsBar(o.w,o.d,o.l)}<span class="exp-meta">${o.sp}% · ${o.t}g</span></div>
+      </div>
+    </div>`).join('');
+
+  const opData=famData.openings[opening];
+  if(!opData)return;
+  const variations=Object.entries(opData.variations)
+    .map(([name,d])=>({name,...calcStats(d.games)}))
+    .sort((a,b)=>b.t-a.t);
+
+  document.getElementById('exp-list-variation').innerHTML=variations.length>1?variations.map(v=>`
+    <div class="exp-item${EXP.variation===v.name?' selected':''}" onclick="selectVariation('${v.name.replace(/'/g,"\\'").replace(/\n/g,'')}')">
+      <div style="flex:1;min-width:0;">
+        <div class="exp-name">${v.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">${statsBar(v.w,v.d,v.l)}<span class="exp-meta">${v.sp}% · ${v.t}g</span></div>
+      </div>
+    </div>`).join('') :
+    '<div class="exp-empty">No sub-variations detected.</div>';
+
+  renderExpDetail(opening, calcStats(opData.games));
+};
+
+window.selectVariation = function(variation){
+  EXP.variation=variation;
+  const opData=EXP.tree[EXP.family]?.openings[EXP.opening];
+  if(!opData)return;
+  const varData=opData.variations[variation];
+  if(!varData)return;
+  // re-render variation list
+  const variations=Object.entries(opData.variations).map(([name,d])=>({name,...calcStats(d.games)})).sort((a,b)=>b.t-a.t);
+  document.getElementById('exp-list-variation').innerHTML=variations.map(v=>`
+    <div class="exp-item${EXP.variation===v.name?' selected':''}" onclick="selectVariation('${v.name.replace(/'/g,"\\'").replace(/\n/g,'')}')">
+      <div style="flex:1;min-width:0;">
+        <div class="exp-name">${v.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">${statsBar(v.w,v.d,v.l)}<span class="exp-meta">${v.sp}% · ${v.t}g</span></div>
+      </div>
+    </div>`).join('');
+  renderExpDetail(variation, calcStats(varData.games));
+};
+
+function renderExpDetail(name, stats){
+  const {t,w,d,l,sp,vsElo} = stats;
+  const spColor=sp>=55?'var(--win)':sp<45?'var(--loss)':'var(--draw)';
+  const vsColor=vsElo===null?'var(--ink-mute)':parseFloat(vsElo)>0?'var(--win)':'var(--loss)';
+  document.getElementById('exp-detail').innerHTML=`
+    <h4>${name}</h4>
+    <div class="exp-stat-grid">
+      <div class="exp-stat"><div class="exp-stat-val" style="color:${spColor}">${sp}%</div><div class="exp-stat-lbl">Score %</div></div>
+      <div class="exp-stat"><div class="exp-stat-val">${t}</div><div class="exp-stat-lbl">Games</div></div>
+      <div class="exp-stat"><div class="exp-stat-val" style="color:var(--win)">${w}</div><div class="exp-stat-lbl">Wins</div></div>
+      <div class="exp-stat"><div class="exp-stat-val" style="color:var(--draw)">${d}</div><div class="exp-stat-lbl">Draws</div></div>
+      <div class="exp-stat"><div class="exp-stat-val" style="color:var(--loss)">${l}</div><div class="exp-stat-lbl">Losses</div></div>
+      <div class="exp-stat"><div class="exp-stat-val" style="color:${vsColor};font-size:1.1rem;">${vsElo!==null?(parseFloat(vsElo)>0?'+':'')+vsElo+'%':'—'}</div><div class="exp-stat-lbl">vs Elo</div></div>
+    </div>
+    <div class="exp-tip">${coachTip(name,stats)}</div>`;
 }
 
 // ── OPENINGS CHART & TABLE ────────────────────────────────────────────────────
