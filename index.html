@@ -620,18 +620,94 @@ function ecoFam(eco){
   return{A:'A: Flank/Irregular',B:'B: Semi-Open (1.e4)',C:'C: Open (1.e4 e5)',D:'D: Closed (1.d4)',E:'E: Indian Defenses'}[eco[0]]||'Unknown';
 }
 const SKIP=new Set(['?','anonymous','guest','lichess ai','stockfish']);
+
+// ── PLAYER DETECTION ─────────────────────────────────────────────────────────
+// Returns an object { primary, aliases } where aliases is a Set of all
+// lowercase names that belong to the same person.
+//
+// How it works:
+// 1. Count every name across all White/Black headers
+// 2. Pick the most frequent name as primary
+// 3. Find any other name that *always appears on the opposite side* of the
+//    primary name — meaning they are always opponents of each other.
+//    That pattern means they are the SAME person (e.g. online username vs
+//    real name in over-the-board games mixed together).
+// 4. Also include names that never appear against the primary (never opponents)
+//    and appear frequently — another signal they may be the same person
+//    playing in a different event format.
+//
+// Net result: if your PGN has some games with "Antarez2014" and some with
+// "Luke Cassada", both get detected as the same player automatically.
+
 function detectPlayer(games){
-  const f={};
-  games.forEach(g=>[g.white,g.black].forEach(n=>{const k=n.trim().toLowerCase();if(k&&!SKIP.has(k))f[n]=(f[n]||0)+1;}));
-  return Object.entries(f).sort((a,b)=>b[1]-a[1])[0]?.[0]||null;
+  const freq={};
+  games.forEach(g=>[g.white,g.black].forEach(n=>{
+    const k=n.trim().toLowerCase();
+    if(k&&!SKIP.has(k))freq[n]=(freq[n]||0)+1;
+  }));
+  const sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+  if(!sorted.length)return{primary:null,aliases:new Set()};
+
+  const primary=sorted[0][0];
+  const pl=primary.toLowerCase();
+  const aliases=new Set([pl]);
+
+  // For every other frequent name, check if it could be the same person:
+  // same person = they are never on the same side as primary in a game,
+  // i.e. every game they share has primary on one color and candidate on the other.
+  sorted.slice(1).forEach(([name])=>{
+    const k=name.trim().toLowerCase();
+    if(SKIP.has(k))return;
+    // Find games where both primary and this name appear
+    const shared=games.filter(g=>{
+      const w=g.white.toLowerCase(),b=g.black.toLowerCase();
+      return (w===pl||b===pl)&&(w===k||b===k);
+    });
+    if(shared.length===0){
+      // Never played each other — could be same person in different event format
+      // Include if they appear in at least 2 games
+      if(freq[name]>=2) aliases.add(k);
+    } else {
+      // Check they are always on opposite sides (same person switching colors)
+      const alwaysOpposite=shared.every(g=>{
+        const w=g.white.toLowerCase(),b=g.black.toLowerCase();
+        return (w===pl&&b===k)||(b===pl&&w===k);
+      });
+      if(alwaysOpposite) aliases.add(k);
+    }
+  });
+
+  return{primary,aliases};
 }
-function enrich(games,player){
+
+function enrich(games,playerInfo){
+  // playerInfo can be a string (legacy) or {primary, aliases}
+  let primary, aliases;
+  if(typeof playerInfo==='string'){
+    primary=playerInfo;
+    aliases=new Set([playerInfo.toLowerCase()]);
+  } else {
+    primary=playerInfo.primary;
+    aliases=playerInfo.aliases;
+  }
+
+  // Collect all display names that belong to the player (for labelling)
+  const allPlayerNames=[...aliases];
+
   return games.map(g=>{
-    const pl=player.toLowerCase();
-    let color=null,outcome=null,uElo=null,oElo=null,uAcc=null,opp=null;
-    if(g.white.toLowerCase()===pl){color='White';uElo=g.wElo;oElo=g.bElo;uAcc=g.wAcc;opp=g.black;outcome=g.result==='white'?'Win':g.result==='draw'?'Draw':g.result==='black'?'Loss':null;}
-    else if(g.black.toLowerCase()===pl){color='Black';uElo=g.bElo;oElo=g.wElo;uAcc=g.bAcc;opp=g.white;outcome=g.result==='black'?'Win':g.result==='draw'?'Draw':g.result==='white'?'Loss':null;}
-    if(!color||!outcome)return null;
+    const w=g.white.toLowerCase(),b=g.black.toLowerCase();
+    const isWhite=aliases.has(w);
+    const isBlack=aliases.has(b);
+    if(!isWhite&&!isBlack)return null;
+    // If somehow both sides match (shouldn't happen), prefer White
+    const color=isWhite?'White':'Black';
+    let uElo,oElo,uAcc,opp;
+    if(color==='White'){uElo=g.wElo;oElo=g.bElo;uAcc=g.wAcc;opp=g.black;}
+    else{uElo=g.bElo;oElo=g.wElo;uAcc=g.bAcc;opp=g.white;}
+    const outcome=color==='White'
+      ?g.result==='white'?'Win':g.result==='draw'?'Draw':g.result==='black'?'Loss':null
+      :g.result==='black'?'Win':g.result==='draw'?'Draw':g.result==='white'?'Loss':null;
+    if(!outcome)return null;
     const score=outcome==='Win'?1:outcome==='Draw'?0.5:0;
     const rDiff=(uElo&&oElo)?uElo-oElo:null;
     const expScore=rDiff!==null?1/(1+Math.pow(10,-rDiff/400)):null;
@@ -647,8 +723,11 @@ function updateInfo(text){
   const raw=(text||'').trim();const pi=document.getElementById('pgn-info');
   if(!raw){pi.classList.remove('visible');return;}
   const cnt=(raw.match(/^\[Event\s/mg)||[]).length||1;
-  const player=detectPlayer(parseGames(raw));
-  pi.textContent=[`${cnt} game${cnt>1?'s':''}`,player?`player: ${player}`:''].filter(Boolean).join('  ·  ');
+  const pInfo=detectPlayer(parseGames(raw));
+  const primary=pInfo.primary;
+  const aliases=[...pInfo.aliases].filter(a=>a!==primary?.toLowerCase());
+  const aliasStr=aliases.length?` (also: ${aliases.join(', ')})`:'';
+  pi.textContent=[`${cnt} game${cnt>1?'s':''}`,primary?`player: ${primary}${aliasStr}`:''].filter(Boolean).join('  ·  ');
   pi.classList.add('visible');
 }
 
@@ -687,11 +766,18 @@ document.getElementById('btn-analyze').addEventListener('click',()=>{
   if(!raw){showError('Please paste or upload PGN games first.');return;}
   const parsed=parseGames(raw);
   if(!parsed.length){showError('No valid PGN games found. Please check the format.');return;}
-  const player=detectPlayer(parsed);
-  if(!player){showError('Could not identify a player name from the PGN headers.');return;}
-  const enriched=enrich(parsed,player);
-  if(!enriched.length){showError('Could not match games to player "'+player+'". Check that the player name appears in White or Black headers.');return;}
-  ALL_GAMES=enriched;FILTERED=[...enriched];PLAYER=player;
+  const pInfo=detectPlayer(parsed);
+  if(!pInfo.primary){showError('Could not identify a player name from the PGN headers.');return;}
+  const enriched=enrich(parsed,pInfo);
+  if(!enriched.length){showError('Could not match games to player "'+pInfo.primary+'". Check that the player name appears in White or Black headers.');return;}
+  // Store all aliases so the banner can show them
+  const aliasDisplay=[...pInfo.aliases].filter(a=>a!==pInfo.primary.toLowerCase());
+  ALL_GAMES=enriched;FILTERED=[...enriched];
+  PLAYER=pInfo.primary+(aliasDisplay.length?' / '+aliasDisplay.map(a=>{
+    // Find the original-cased version
+    const found=parsed.flatMap(g=>[g.white,g.black]).find(n=>n.toLowerCase()===a);
+    return found||a;
+  }).join(' / '):'');
   document.getElementById('filter-count').textContent=`${ALL_GAMES.length} games`;
   renderAll(FILTERED);
 });
