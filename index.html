@@ -619,33 +619,122 @@ function drawBoard(board,lastMove){
 function applyMove(board,san,turn){
   if(!san)return null;
   const b=board.map(r=>[...r]);
-  const files=['a','b','c','d','e','f','g','h'];
+  const FILES=['a','b','c','d','e','f','g','h'];
+
+  // Castling
   if(san==='O-O'||san==='O-O-O'){
     const r=turn==='w'?7:0;
-    if(san==='O-O'){b[r][6]=b[r][4];b[r][4]=null;b[r][5]=b[r][7];b[r][7]=null;return{board:b,move:{from:files[4]+(8-r),to:files[6]+(8-r)}};}
-    else{b[r][2]=b[r][4];b[r][4]=null;b[r][3]=b[r][0];b[r][0]=null;return{board:b,move:{from:files[4]+(8-r),to:files[2]+(8-r)}};}
+    if(san==='O-O'){b[r][6]=b[r][4];b[r][4]=null;b[r][5]=b[r][7];b[r][7]=null;return{board:b,move:{from:FILES[4]+(8-r),to:FILES[6]+(8-r)}};}
+    else{b[r][2]=b[r][4];b[r][4]=null;b[r][3]=b[r][0];b[r][0]=null;return{board:b,move:{from:FILES[4]+(8-r),to:FILES[2]+(8-r)}};}
   }
-  const cl=san.replace(/[+#x]/g,'').replace(/=[QRBN]/g,'');
-  let pName,toF,toR,ffH=null,frH=null;
-  if(/^[KQRBN]/.test(cl)){
-    pName=turn+cl[0];const rest=cl.slice(1);
-    if(rest.length===2){toF=files.indexOf(rest[0]);toR=8-+rest[1];}
-    else if(rest.length===3){if(/[a-h]/.test(rest[0]))ffH=files.indexOf(rest[0]);else if(/[1-8]/.test(rest[0]))frH=8-+rest[0];toF=files.indexOf(rest[1]);toR=8-+rest[2];}
-    else if(rest.length===4){ffH=files.indexOf(rest[0]);frH=8-+rest[1];toF=files.indexOf(rest[2]);toR=8-+rest[3];}
+
+  // Strip check/mate, promotion, keep capture 'x' temporarily
+  const isCapture=/x/.test(san);
+  // Remove promotion suffix (=Q etc), check/mate symbols, but keep letters/digits/x
+  let s=san.replace(/[+#]/g,'').replace(/=[QRBN]/i,'');
+  // Now s looks like: e4, exd5, Nf3, Nbd2, O-O, e8Q (promotion already stripped)
+
+  const isPiece=/^[KQRBN]/.test(s);
+
+  if(isPiece){
+    // Piece move: strip the piece letter, then parse disambiguation + destination
+    const piece=turn+s[0];
+    let rest=s.slice(1).replace('x',''); // remove capture marker
+    // rest is now like: f3, bd2, 1d2, d1f3
+    let toF,toR,ffH=null,frH=null;
+    if(rest.length===2){
+      toF=FILES.indexOf(rest[0]);toR=8-+rest[1];
+    } else if(rest.length===3){
+      if(/[a-h]/.test(rest[0]))ffH=FILES.indexOf(rest[0]);
+      else if(/[1-8]/.test(rest[0]))frH=8-+rest[0];
+      toF=FILES.indexOf(rest[1]);toR=8-+rest[2];
+    } else if(rest.length===4){
+      ffH=FILES.indexOf(rest[0]);frH=8-+rest[1];
+      toF=FILES.indexOf(rest[2]);toR=8-+rest[3];
+    }
+    if(toF===undefined||toF<0||toR===undefined||toR<0)return{board:b,move:null};
+    let fR=-1,fF=-1;
+    outer:for(let r=0;r<8;r++)for(let f=0;f<8;f++){
+      if(b[r][f]===piece){
+        if(ffH!==null&&f!==ffH)continue;
+        if(frH!==null&&r!==frH)continue;
+        fR=r;fF=f;break outer;
+      }
+    }
+    if(fR<0)return{board:b,move:null};
+    b[toR][toF]=b[fR][fF];b[fR][fF]=null;
+    return{board:b,move:{from:FILES[fF]+(8-fR),to:FILES[toF]+(8-toR)}};
+  }
+
+  // Pawn move
+  const pName=turn+'P';
+  let toF,toR,ffH=null;
+
+  if(isCapture){
+    // e.g. exd5 or exd8 (promotion already stripped)
+    // s looks like: exd5
+    const parts=s.replace('x',' ').trim().split(' ');
+    // parts[0]='e', parts[1]='d5'  OR s might be 'ed5' after x stripped differently
+    // Handle both exd5 and ed5 forms
+    let fromFile,toSq;
+    if(s.includes('x')){fromFile=s[0];toSq=s.slice(2);}
+    else{fromFile=s[0];toSq=s.slice(1);}
+    ffH=FILES.indexOf(fromFile);
+    toF=FILES.indexOf(toSq[0]);
+    toR=8-+toSq[1];
   } else {
-    pName=turn+'P';
-    if(cl.length===2){toF=files.indexOf(cl[0]);toR=8-+cl[1];}
-    else if(cl.length===4&&cl[1]==='x'){ffH=files.indexOf(cl[0]);toF=files.indexOf(cl[2]);toR=8-+cl[3];}
-    else if(cl.length===3){ffH=files.indexOf(cl[0]);toF=files.indexOf(cl[1]);toR=8-+cl[2];}
+    // Simple pawn push: e4, e2e4 (rare), or after promo strip: e8
+    s=s.replace('x','');
+    if(s.length===2){toF=FILES.indexOf(s[0]);toR=8-+s[1];}
+    else if(s.length===4){ffH=FILES.indexOf(s[0]);toF=FILES.indexOf(s[2]);toR=8-+s[3];}
+    else{toF=FILES.indexOf(s[0]);toR=8-+s[1];}
   }
-  if(toF===undefined||toF<0||toR===undefined)return{board:b,move:null};
+
+  if(toF===undefined||toF<0||toR===undefined||toR<0)return{board:b,move:null};
+
+  // Find the pawn — search from correct direction so we find the nearest pawn
   let fR=-1,fF=-1;
-  for(let r=0;r<8&&fR<0;r++)for(let f=0;f<8;f++){
-    if(b[r][f]===pName){if(ffH!==null&&f!==ffH)continue;if(frH!==null&&r!==frH)continue;fR=r;fF=f;break;}
+  if(turn==='w'){
+    // White pawns move up (increasing rank index in board = lower rank number)
+    // So search from bottom up (rows 6 down to 0, i.e. ranks 2 to 8)
+    for(let r=7;r>=0&&fR<0;r--){
+      for(let f=0;f<8;f++){
+        if(b[r][f]===pName){
+          if(ffH!==null&&f!==ffH)continue;
+          // For non-capture, pawn must be on same file as target
+          if(!isCapture&&f!==toF)continue;
+          fR=r;fF=f;break;
+        }
+      }
+    }
+  } else {
+    // Black pawns move down (decreasing rank index = higher rank number)
+    for(let r=0;r<8&&fR<0;r++){
+      for(let f=0;f<8;f++){
+        if(b[r][f]===pName){
+          if(ffH!==null&&f!==ffH)continue;
+          if(!isCapture&&f!==toF)continue;
+          fR=r;fF=f;break;
+        }
+      }
+    }
   }
   if(fR<0)return{board:b,move:null};
-  b[toR][toF]=b[fR][fF];b[fR][fF]=null;
-  return{board:b,move:{from:files[fF]+(8-fR),to:files[toF]+(8-toR)}};
+
+  // Handle en passant: pawn capture but destination square is empty
+  if(isCapture&&b[toR][toF]===null){
+    // Remove the captured pawn (it's on toF but on the same rank as the moving pawn)
+    b[fR][toF]=null;
+  }
+
+  b[toR][toF]=b[fR][fF];
+  b[fR][fF]=null;
+
+  // Promotion: if pawn reached back rank, promote to queen by default
+  if(toR===0&&turn==='w')b[toR][toF]='wQ';
+  if(toR===7&&turn==='b')b[toR][toF]='bQ';
+
+  return{board:b,move:{from:FILES[fF]+(8-fR),to:FILES[toF]+(8-toR)}};
 }
 function renderBoard(games){
   drawBoard(fenBoard(START),null);
