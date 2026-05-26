@@ -189,10 +189,10 @@ textarea::placeholder{color:var(--ink-mute);}
       <div id="panel-upload" style="display:none;">
         <div class="drop-zone" id="drop-zone">
           <div class="drop-icon">♟</div>
-          <div class="drop-label" id="drop-label"><strong>Drop your .pgn file here</strong><br>or click to browse</div>
+          <div class="drop-label" id="drop-label"><strong>Drop .pgn files here</strong><br>or click to browse — multiple files supported</div>
           <button class="btn-browse" onclick="document.getElementById('file-input').click();event.stopPropagation();">Browse files</button>
         </div>
-        <input class="drop-file-input" type="file" id="file-input" accept=".pgn,.txt">
+        <input class="drop-file-input" type="file" id="file-input" accept=".pgn,.txt" multiple>
       </div>
       <div class="pgn-info" id="pgn-info"></div>
       <div class="controls-row">
@@ -399,13 +399,38 @@ function switchTab(t){
   document.getElementById('panel-paste').style.display=t==='paste'?'':'none';
   document.getElementById('panel-upload').style.display=t==='upload'?'':'none';
 }
-function readFile(f,cb){const r=new FileReader();r.onload=e=>cb(e.target.result);r.readAsText(f);}
 const DZ=document.getElementById('drop-zone'),FI=document.getElementById('file-input'),DL=document.getElementById('drop-label');
 DZ.addEventListener('click',()=>FI.click());
 DZ.addEventListener('dragover',e=>{e.preventDefault();DZ.classList.add('drag-over');});
 DZ.addEventListener('dragleave',()=>DZ.classList.remove('drag-over'));
-DZ.addEventListener('drop',e=>{e.preventDefault();DZ.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)readFile(f,t=>{document.getElementById('pgn-input').value=t;DZ.classList.add('has-file');DL.innerHTML=`<span style="color:var(--teal)">✓ ${f.name} (${(f.size/1024).toFixed(1)} KB)</span>`;updateInfo(t);});});
-FI.addEventListener('change',()=>{const f=FI.files[0];if(f)readFile(f,t=>{document.getElementById('pgn-input').value=t;DZ.classList.add('has-file');DL.innerHTML=`<span style="color:var(--teal)">✓ ${f.name} (${(f.size/1024).toFixed(1)} KB)</span>`;updateInfo(t);});});
+DZ.addEventListener('drop',e=>{e.preventDefault();DZ.classList.remove('drag-over');loadFiles([...e.dataTransfer.files]);});
+FI.addEventListener('change',()=>loadFiles([...FI.files]));
+
+// Load one or more PGN files, concatenate, append to existing textarea content
+function loadFiles(files){
+  if(!files||!files.length)return;
+  const validFiles=files.filter(f=>f.name.match(/\.(pgn|txt)$/i));
+  if(!validFiles.length){showError('Please upload .pgn or .txt files.');return;}
+  let loaded=0;
+  let combined=document.getElementById('pgn-input').value.trim();
+  validFiles.forEach(f=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      const text=e.target.result.trim();
+      combined=(combined?combined+'\n\n':'')+text;
+      loaded++;
+      if(loaded===validFiles.length){
+        document.getElementById('pgn-input').value=combined;
+        DZ.classList.add('has-file');
+        const names=validFiles.map(f=>f.name).join(', ');
+        const totalKB=(validFiles.reduce((s,f)=>s+f.size,0)/1024).toFixed(1);
+        DL.innerHTML=`<span style="color:var(--teal)">✓ ${validFiles.length} file${validFiles.length>1?'s':''}: ${names.slice(0,60)}${names.length>60?'…':''} (${totalKB} KB)</span>`;
+        updateInfo(combined);
+      }
+    };
+    r.readAsText(f);
+  });
+}
 document.getElementById('pgn-input').addEventListener('input',e=>updateInfo(e.target.value));
 
 function showError(m){const e=document.getElementById('error-box');e.textContent=m;e.classList.add('visible');}
@@ -745,7 +770,7 @@ document.getElementById('btn-reset-filter').addEventListener('click',()=>{
 });
 document.getElementById('btn-clear').addEventListener('click',()=>{
   document.getElementById('pgn-input').value='';FI.value='';
-  DZ.classList.remove('has-file');DL.innerHTML='<strong>Drop your .pgn file here</strong><br>or click to browse';
+  DZ.classList.remove('has-file');DL.innerHTML='<strong>Drop .pgn files here</strong><br>or click to browse — multiple files supported';
   document.getElementById('pgn-info').classList.remove('visible');
   document.getElementById('results-area').classList.remove('visible');
   ALL_GAMES=[];FILTERED=[];PLAYER='';hideError();
@@ -1263,46 +1288,74 @@ function getFamilyFor(name){
   return 'Other';
 }
 
-// Split full opening name into [opening, variation]
-// e.g. "Sicilian Defense: Najdorf Variation, English Attack"
-//   -> opening="Sicilian Defense: Najdorf Variation", variation="English Attack"
-// e.g. "Sicilian Defense: Najdorf Variation"
-//   -> opening="Sicilian Defense", variation="Najdorf Variation"
-// e.g. "Sicilian Defense"
-//   -> opening="Sicilian Defense", variation=null
+// Split full opening name into { family, opening, variation }
+// Structure:
+//   Family   = broad grouping (from FAMILY_MAP)
+//   Opening  = the specific opening / system within the family
+//   Variation = the sub-variation within that opening
+//
+// Examples:
+//   "Sicilian Defense: Najdorf Variation, English Attack"
+//     opening  = "Najdorf Variation"
+//     variation = "English Attack"
+//
+//   "Sicilian Defense: Najdorf Variation"
+//     opening  = "Najdorf Variation"
+//     variation = "(Main Line)"
+//
+//   "Sicilian Defense"
+//     opening  = "Sicilian Defense"
+//     variation = "(Main Line)"
+//
+//   "Sicilian"  (some PGNs shorten it)
+//     opening  = "Sicilian"
+//     variation = "(Main Line)"
+//
+//   "Queen's Gambit Declined: Orthodox Defense, Rubinstein Variation"
+//     opening  = "Orthodox Defense"
+//     variation = "Rubinstein Variation"
 function splitOpeningVariation(name){
-  // If name has a colon, split there
   const colon = name.indexOf(':');
-  if(colon>0){
-    const base = name.slice(0,colon).trim();           // e.g. "Sicilian Defense"
-    const rest = name.slice(colon+1).trim();           // e.g. "Najdorf Variation, English Attack"
-    const comma = rest.indexOf(',');
-    if(comma>0){
+  if(colon > 0){
+    const afterColon = name.slice(colon+1).trim();  // e.g. "Najdorf Variation, English Attack"
+    const comma = afterColon.indexOf(',');
+    if(comma > 0){
       return {
-        opening: base+': '+rest.slice(0,comma).trim(), // "Sicilian Defense: Najdorf Variation"
-        variation: rest.slice(comma+1).trim()           // "English Attack"
+        opening:   afterColon.slice(0, comma).trim(),  // "Najdorf Variation"
+        variation: afterColon.slice(comma+1).trim()    // "English Attack"
       };
     }
-    return { opening: base, variation: rest };         // "Sicilian Defense", "Najdorf Variation"
+    // Only one part after colon — it IS the opening name
+    return {
+      opening:   afterColon,       // "Najdorf Variation"
+      variation: '(Main Line)'
+    };
   }
-  return { opening: name, variation: null };
+  // No colon — the whole name is the opening
+  return {
+    opening:   name,
+    variation: '(Main Line)'
+  };
 }
 
 // Build nested data structure from games
+// Structure: family -> opening -> variation -> games[]
 function buildExplorerData(games, colorFilter){
   const filtered = colorFilter==='all' ? games : games.filter(g=>g.color===colorFilter);
-  // families -> openings -> variations -> games
   const tree = {};
   filtered.forEach(g=>{
     const family = getFamilyFor(g.openingName);
     const {opening, variation} = splitOpeningVariation(g.openingName);
-    const varKey = variation || '(Main Line)';
+
     if(!tree[family]) tree[family]={games:[],openings:{}};
     tree[family].games.push(g);
+
     if(!tree[family].openings[opening]) tree[family].openings[opening]={games:[],variations:{}};
     tree[family].openings[opening].games.push(g);
-    if(!tree[family].openings[opening].variations[varKey]) tree[family].openings[opening].variations[varKey]={games:[]};
-    tree[family].openings[opening].variations[varKey].games.push(g);
+
+    if(!tree[family].openings[opening].variations[variation])
+      tree[family].openings[opening].variations[variation]={games:[]};
+    tree[family].openings[opening].variations[variation].games.push(g);
   });
   return tree;
 }
@@ -1400,14 +1453,16 @@ window.selectOpening = function(opening){
     .map(([name,d])=>({name,...calcStats(d.games)}))
     .sort((a,b)=>b.t-a.t);
 
-  document.getElementById('exp-list-variation').innerHTML=variations.length>1?variations.map(v=>`
-    <div class="exp-item${EXP.variation===v.name?' selected':''}" onclick="selectVariation('${v.name.replace(/'/g,"\\'").replace(/\n/g,'')}')">
+  // Show all variations; if only (Main Line) exists, say so clearly
+  const realVars = variations.filter(v=>v.name!=='(Main Line)');
+  const showVars = realVars.length>0 ? realVars : variations;
+  document.getElementById('exp-list-variation').innerHTML=showVars.map(v=>`
+    <div class="exp-item${EXP.variation===v.name?' selected':''}" onclick="selectVariation('${v.name.replace(/'/g,"\'").replace(/\n/g,'')}')">
       <div style="flex:1;min-width:0;">
         <div class="exp-name">${v.name}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">${statsBar(v.w,v.d,v.l)}<span class="exp-meta">${v.sp}% · ${v.t}g</span></div>
       </div>
-    </div>`).join('') :
-    '<div class="exp-empty">No sub-variations detected.</div>';
+    </div>`).join('') || '<div class="exp-empty">No variation data.</div>';
 
   renderExpDetail(opening, calcStats(opData.games));
 };
