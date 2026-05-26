@@ -3,110 +3,111 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chess Analysis — Game Review</title>
+<title>Chess Game Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --ivory: #f7f3ec; --cream: #ede8de; --brown-light: #c8b89a;
     --brown: #8b6f47; --brown-dark: #5c4a2a; --ink: #1a1610;
     --ink-soft: #3d3228; --ink-mute: #7a6a57;
-    --accent: #c0392b; --accent-soft: #f5e6e5;
-    --gold-soft: #f9f0dc; --teal: #1a6b5e; --teal-soft: #e0f0ed;
+    --win: #27ae60; --draw: #f39c12; --loss: #c0392b;
+    --white-col: #d4a017; --black-col: #2c3e50;
+    --accent-soft: #f5e6e5; --gold-soft: #f9f0dc; --teal: #1a6b5e; --teal-soft: #e0f0ed;
     --border: rgba(90,65,30,0.18); --border-strong: rgba(90,65,30,0.35);
     --radius: 6px;
   }
   body { font-family:'Source Serif 4',Georgia,serif; background:var(--ivory); color:var(--ink); min-height:100vh; line-height:1.7; }
   .board-pattern { position:fixed; inset:0; z-index:0; pointer-events:none; background-image:repeating-conic-gradient(rgba(139,111,71,0.04) 0% 25%,transparent 0% 50%); background-size:60px 60px; }
-  .site-wrapper { position:relative; z-index:1; max-width:860px; margin:0 auto; padding:0 24px 80px; }
+  .site-wrapper { position:relative; z-index:1; max-width:960px; margin:0 auto; padding:0 24px 80px; }
   header { padding:48px 0 32px; border-bottom:1px solid var(--border-strong); margin-bottom:40px; }
   .logo-row { display:flex; align-items:center; gap:14px; margin-bottom:8px; }
   .chess-icon { width:44px; height:44px; background:var(--ink); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; }
-  h1 { font-family:'Playfair Display',Georgia,serif; font-size:2.2rem; font-weight:700; letter-spacing:-0.02em; line-height:1.1; color:var(--ink); }
+  h1 { font-family:'Playfair Display',serif; font-size:2.2rem; font-weight:700; letter-spacing:-0.02em; color:var(--ink); }
   .tagline { font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--ink-mute); letter-spacing:0.08em; text-transform:uppercase; margin-top:6px; }
   .input-section { background:white; border:1px solid var(--border-strong); border-radius:10px; overflow:hidden; margin-bottom:32px; box-shadow:0 2px 12px rgba(0,0,0,0.06); }
   .input-header { background:var(--ink); color:white; padding:14px 20px; display:flex; align-items:center; gap:10px; }
   .input-header-text { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; letter-spacing:0.04em; }
-  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; }
-  .dot-r{background:#ff5f57;} .dot-y{background:#febc2e;} .dot-g{background:#28c840;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
+  .dot-r{background:#ff5f57;}.dot-y{background:#febc2e;}.dot-g{background:#28c840;}
   .input-body { padding:20px; }
   .field-label { font-family:'IBM Plex Mono',monospace; font-size:0.75rem; color:var(--ink-mute); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; display:block; }
   .pgn-tabs { display:flex; margin-bottom:12px; border:1px solid var(--border-strong); border-radius:var(--radius); overflow:hidden; }
   .pgn-tab { flex:1; font-family:'IBM Plex Mono',monospace; font-size:0.78rem; letter-spacing:0.04em; text-transform:uppercase; padding:9px 0; text-align:center; cursor:pointer; background:var(--cream); color:var(--ink-mute); border:none; transition:background 0.15s,color 0.15s; }
   .pgn-tab.active { background:var(--ink); color:white; }
   .pgn-tab:first-child { border-right:1px solid var(--border-strong); }
-  .drop-zone { width:100%; min-height:160px; border:2px dashed var(--border-strong); border-radius:var(--radius); background:var(--ivory); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; cursor:pointer; transition:border-color 0.2s,background 0.2s; text-align:center; padding:24px; }
-  .drop-zone:hover, .drop-zone.drag-over { border-color:var(--brown); background:var(--cream); }
-  .drop-zone.has-file { border-style:solid; border-color:var(--teal); background:var(--teal-soft); }
-  .drop-icon { font-size:2rem; line-height:1; }
-  .drop-label { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--ink-mute); line-height:1.5; }
-  .drop-label strong { color:var(--ink); font-weight:600; }
-  .drop-file-input { display:none; }
-  .btn-browse { font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--brown-dark); background:white; border:1px solid var(--border-strong); border-radius:var(--radius); padding:6px 16px; cursor:pointer; transition:background 0.15s; }
-  .btn-browse:hover { background:var(--cream); }
-  textarea { width:100%; height:220px; font-family:'IBM Plex Mono',monospace; font-size:0.82rem; line-height:1.6; color:var(--ink); background:var(--ivory); border:1px solid var(--border-strong); border-radius:var(--radius); padding:14px; resize:vertical; outline:none; transition:border-color 0.2s; }
-  textarea:focus { border-color:var(--brown); }
-  textarea::placeholder { color:var(--ink-mute); }
-  .pgn-info { font-family:'IBM Plex Mono',monospace; font-size:0.75rem; color:var(--ink-mute); margin-top:10px; padding:8px 12px; background:var(--cream); border-radius:var(--radius); display:none; }
-  .pgn-info.visible { display:block; }
-  .controls-row { display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; }
-  .hint-text { font-size:0.82rem; color:var(--ink-mute); flex:1; min-width:200px; }
-  .btn-analyze { font-family:'IBM Plex Mono',monospace; font-size:0.85rem; letter-spacing:0.04em; color:white; background:var(--ink); border:none; border-radius:var(--radius); padding:12px 28px; cursor:pointer; transition:background 0.15s,transform 0.1s; display:flex; align-items:center; gap:8px; white-space:nowrap; }
-  .btn-analyze:hover { background:var(--brown-dark); }
-  .btn-analyze:active { transform:scale(0.98); }
-  .btn-analyze:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-  .btn-clear { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--ink-mute); background:none; border:1px solid var(--border-strong); border-radius:var(--radius); padding:11px 18px; cursor:pointer; transition:background 0.15s; }
-  .btn-clear:hover { background:var(--cream); }
-  .loading-bar-wrap { margin-top:16px; display:none; }
-  .loading-bar-wrap.active { display:block; }
-  .loading-bar { height:3px; background:var(--cream); border-radius:3px; overflow:hidden; margin-bottom:8px; }
-  .loading-bar-inner { height:100%; width:0%; background:var(--brown); border-radius:3px; animation:load-pulse 2.5s ease-in-out infinite; }
-  @keyframes load-pulse { 0%{width:0%;opacity:1} 50%{width:75%;opacity:0.8} 100%{width:95%;opacity:1} }
-  .loading-text { font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--ink-mute); text-align:center; animation:blink 1.4s ease-in-out infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .error-box { background:var(--accent-soft); border:1px solid rgba(192,57,43,0.3); border-radius:8px; padding:16px 20px; color:var(--accent); font-size:0.9rem; margin-top:16px; display:none; line-height:1.6; }
-  .error-box.visible { display:block; }
-  .results-area { display:none; }
-  .results-area.visible { display:block; }
-  .player-banner { background:var(--ink); color:white; border-radius:10px; padding:20px 24px; margin-bottom:24px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; box-shadow:0 4px 16px rgba(0,0,0,0.12); }
-  .player-avatar { width:52px; height:52px; border-radius:50%; background:var(--brown-light); display:flex; align-items:center; justify-content:center; font-size:1.6rem; flex-shrink:0; }
-  .player-info { flex:1; }
-  .player-name { font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:700; margin-bottom:2px; }
-  .player-meta { font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--brown-light); letter-spacing:0.04em; }
-  .color-badges { display:flex; gap:8px; flex-wrap:wrap; }
-  .color-badge { font-family:'IBM Plex Mono',monospace; font-size:0.75rem; letter-spacing:0.04em; padding:5px 12px; border-radius:20px; border:1px solid rgba(255,255,255,0.2); }
-  .badge-white{background:rgba(255,255,255,0.12);} .badge-black{background:rgba(0,0,0,0.3);}
-  .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:28px; }
-  .stat-card { background:white; border:1px solid var(--border); border-radius:8px; padding:14px 16px; text-align:center; }
-  .stat-val { font-family:'Playfair Display',serif; font-size:1.8rem; font-weight:700; line-height:1; margin-bottom:4px; color:var(--ink); }
-  .stat-lbl { font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--ink-mute); text-transform:uppercase; letter-spacing:0.06em; }
-  .stat-val.win{color:var(--teal);} .stat-val.loss{color:var(--accent);}
-  .section-card { background:white; border:1px solid var(--border-strong); border-radius:10px; margin-bottom:20px; overflow:hidden; box-shadow:0 1px 8px rgba(0,0,0,0.05); }
-  .section-head { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
-  .section-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
-  .icon-opening{background:var(--gold-soft);} .icon-issues{background:var(--accent-soft);}
-  .icon-lines{background:var(--teal-soft);} .icon-summary{background:var(--cream);}
-  .section-title { font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:700; color:var(--ink); }
-  .section-body { padding:20px; }
-  .opening-pill { display:inline-block; background:var(--gold-soft); color:var(--brown-dark); font-family:'IBM Plex Mono',monospace; font-size:0.8rem; padding:4px 12px; border-radius:20px; border:1px solid rgba(180,130,50,0.25); margin:4px 4px 4px 0; }
-  .opening-group-label { font-family:'IBM Plex Mono',monospace; font-size:0.75rem; color:var(--ink-mute); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; display:block; }
-  .opening-group { margin-bottom:16px; }
-  .issue-item { border-left:3px solid var(--accent); padding:10px 0 10px 16px; margin-bottom:14px; font-size:0.95rem; line-height:1.6; color:var(--ink-soft); }
-  .issue-item:last-child{margin-bottom:0;}
-  .issue-label { font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--accent); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px; }
-  .line-item { border:1px solid var(--border); border-radius:8px; margin-bottom:12px; overflow:hidden; }
-  .line-head { background:var(--ivory); padding:10px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); }
-  .line-num { font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:white; background:var(--teal); padding:2px 8px; border-radius:3px; flex-shrink:0; }
-  .line-name { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--ink); font-weight:500; }
-  .moves-block { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--brown-dark); padding:10px 14px; background:white; line-height:1.8; word-break:break-word; }
-  .line-desc { padding:10px 14px; font-size:0.88rem; color:var(--ink-soft); line-height:1.6; border-top:1px solid var(--border); background:white; }
-  .summary-text { font-size:0.97rem; line-height:1.8; color:var(--ink-soft); }
-  .summary-text p { margin-bottom:12px; }
-  .summary-text p:last-child{margin-bottom:0;}
-  .no-data { font-size:0.88rem; color:var(--ink-mute); font-style:italic; }
-  .footer-note { text-align:center; font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--ink-mute); margin-top:40px; padding-top:24px; border-top:1px solid var(--border); letter-spacing:0.04em; }
-  @media(max-width:600px){h1{font-size:1.7rem;} .player-banner{padding:16px;} .stats-row{grid-template-columns:repeat(2,1fr);}}
+  .drop-zone { width:100%; min-height:140px; border:2px dashed var(--border-strong); border-radius:var(--radius); background:var(--ivory); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; cursor:pointer; transition:border-color 0.2s,background 0.2s; text-align:center; padding:24px; }
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--brown);background:var(--cream);}
+  .drop-zone.has-file{border-style:solid;border-color:var(--teal);background:var(--teal-soft);}
+  .drop-icon{font-size:2rem;line-height:1;}
+  .drop-label{font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--ink-mute);line-height:1.5;}
+  .drop-label strong{color:var(--ink);font-weight:600;}
+  .drop-file-input{display:none;}
+  .btn-browse{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--brown-dark);background:white;border:1px solid var(--border-strong);border-radius:var(--radius);padding:6px 16px;cursor:pointer;transition:background 0.15s;}
+  .btn-browse:hover{background:var(--cream);}
+  textarea{width:100%;height:200px;font-family:'IBM Plex Mono',monospace;font-size:0.82rem;line-height:1.6;color:var(--ink);background:var(--ivory);border:1px solid var(--border-strong);border-radius:var(--radius);padding:14px;resize:vertical;outline:none;transition:border-color 0.2s;}
+  textarea:focus{border-color:var(--brown);}
+  textarea::placeholder{color:var(--ink-mute);}
+  .pgn-info{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--ink-mute);margin-top:10px;padding:8px 12px;background:var(--cream);border-radius:var(--radius);display:none;}
+  .pgn-info.visible{display:block;}
+  .controls-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;}
+  .hint-text{font-size:0.82rem;color:var(--ink-mute);flex:1;min-width:200px;}
+  .btn-analyze{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;letter-spacing:0.04em;color:white;background:var(--ink);border:none;border-radius:var(--radius);padding:12px 28px;cursor:pointer;transition:background 0.15s,transform 0.1s;display:flex;align-items:center;gap:8px;white-space:nowrap;}
+  .btn-analyze:hover{background:var(--brown-dark);}
+  .btn-analyze:active{transform:scale(0.98);}
+  .btn-clear{font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--ink-mute);background:none;border:1px solid var(--border-strong);border-radius:var(--radius);padding:11px 18px;cursor:pointer;transition:background 0.15s;}
+  .btn-clear:hover{background:var(--cream);}
+  .error-box{background:#f5e6e5;border:1px solid rgba(192,57,43,0.3);border-radius:8px;padding:16px 20px;color:var(--loss);font-size:0.9rem;margin-top:16px;display:none;}
+  .error-box.visible{display:block;}
+  .results-area{display:none;}
+  .results-area.visible{display:block;}
+
+  /* Player banner */
+  .player-banner{background:var(--ink);color:white;border-radius:10px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;box-shadow:0 4px 16px rgba(0,0,0,0.12);}
+  .player-avatar{width:52px;height:52px;border-radius:50%;background:var(--brown-light);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;}
+  .player-info{flex:1;}
+  .player-name{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;margin-bottom:2px;}
+  .player-meta{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--brown-light);letter-spacing:0.04em;}
+
+  /* Stats grid */
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:24px;}
+  .stat-card{background:white;border:1px solid var(--border);border-radius:8px;padding:14px 16px;text-align:center;}
+  .stat-val{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;line-height:1;margin-bottom:4px;}
+  .stat-lbl{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-mute);text-transform:uppercase;letter-spacing:0.06em;}
+  .stat-val.win{color:var(--win);}.stat-val.loss{color:var(--loss);}.stat-val.draw{color:var(--draw);}
+
+  /* Section cards */
+  .section-card{background:white;border:1px solid var(--border-strong);border-radius:10px;margin-bottom:20px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.05);}
+  .section-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .section-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+  .section-title{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--ink);}
+  .section-body{padding:20px;}
+
+  /* Charts */
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .chart-box{position:relative;height:280px;}
+  .chart-box.tall{height:360px;}
+  .chart-box.full{grid-column:1/-1;height:320px;}
+  canvas{width:100%!important;}
+
+  /* Opening table */
+  .data-table{width:100%;border-collapse:collapse;font-size:0.88rem;}
+  .data-table th{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-mute);padding:8px 12px;text-align:left;border-bottom:2px solid var(--border-strong);background:var(--ivory);}
+  .data-table td{padding:8px 12px;border-bottom:1px solid var(--border);}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:var(--ivory);}
+  .score-bar-wrap{display:flex;align-items:center;gap:8px;}
+  .score-bar{height:8px;border-radius:4px;min-width:2px;}
+  .score-val{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;white-space:nowrap;}
+  .badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:10px;}
+  .badge-white{background:var(--gold-soft);color:var(--brown-dark);}
+  .badge-black{background:#e8e8e8;color:#333;}
+  .tag-win{color:var(--win);font-weight:600;}.tag-loss{color:var(--loss);font-weight:600;}.tag-draw{color:var(--draw);font-weight:600;}
+
+  .footer-note{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-mute);margin-top:40px;padding-top:24px;border-top:1px solid var(--border);letter-spacing:0.04em;}
+  @media(max-width:640px){.chart-grid{grid-template-columns:1fr;}.chart-box.full{grid-column:auto;}h1{font-size:1.7rem;}.stats-row{grid-template-columns:repeat(3,1fr);}}
 </style>
 </head>
 <body>
@@ -116,8 +117,8 @@
     <div class="logo-row">
       <div class="chess-icon">♟</div>
       <div>
-        <h1>Chess Game Review</h1>
-        <p class="tagline">Opening Analysis &amp; Variation Study</p>
+        <h1>Chess Game Analysis</h1>
+        <p class="tagline">Statistical review from PGN — no account needed</p>
       </div>
     </div>
   </header>
@@ -138,11 +139,11 @@
 
 Works with all formats:
 • Chess.com exports (with or without Stockfish annotations)
-• Lichess exports
+• Lichess exports  
 • Plain PGN without any comments or variations
-• Single games or dozens at once
+• Single games or hundreds at once
 
-The most common player name will be identified automatically."></textarea>
+The most common player name is detected automatically."></textarea>
       </div>
       <div id="panel-upload" style="display:none;">
         <div class="drop-zone" id="drop-zone">
@@ -154,13 +155,9 @@ The most common player name will be identified automatically."></textarea>
       </div>
       <div class="pgn-info" id="pgn-info"></div>
       <div class="controls-row">
-        <span class="hint-text">Supports chess.com, Lichess &amp; plain PGN — annotated or unannotated</span>
+        <span class="hint-text">Runs entirely in your browser — no API key, no account, no data sent anywhere</span>
         <button class="btn-clear" id="btn-clear">Clear</button>
         <button class="btn-analyze" id="btn-analyze">♟ Analyse Games</button>
-      </div>
-      <div class="loading-bar-wrap" id="loading-wrap">
-        <div class="loading-bar"><div class="loading-bar-inner"></div></div>
-        <div class="loading-text" id="loading-text">Parsing games…</div>
       </div>
       <div class="error-box" id="error-box"></div>
     </div>
@@ -173,53 +170,79 @@ The most common player name will be identified automatically."></textarea>
         <div class="player-name" id="player-name">—</div>
         <div class="player-meta" id="player-meta">—</div>
       </div>
-      <div class="color-badges" id="color-badges"></div>
     </div>
+
     <div class="stats-row" id="stats-row"></div>
+
+    <!-- Color & Time Control -->
     <div class="section-card">
-      <div class="section-head"><div class="section-icon icon-opening">♜</div><div class="section-title">Openings Played</div></div>
-      <div class="section-body" id="openings-body"></div>
+      <div class="section-head"><div class="section-icon" style="background:var(--gold-soft)">♔</div><div class="section-title">Results by Color &amp; Time Control</div></div>
+      <div class="section-body">
+        <div class="chart-grid">
+          <div class="chart-box"><canvas id="chart-color-white"></canvas></div>
+          <div class="chart-box"><canvas id="chart-color-black"></canvas></div>
+          <div class="chart-box full"><canvas id="chart-tc"></canvas></div>
+        </div>
+      </div>
     </div>
+
+    <!-- Openings -->
     <div class="section-card">
-      <div class="section-head"><div class="section-icon icon-issues">⚠</div><div class="section-title">Problem Areas to Work On</div></div>
-      <div class="section-body" id="issues-body"></div>
+      <div class="section-head"><div class="section-icon" style="background:var(--teal-soft)">♜</div><div class="section-title">Opening Performance</div></div>
+      <div class="section-body">
+        <div class="chart-grid" style="margin-bottom:20px;">
+          <div class="chart-box tall full"><canvas id="chart-openings"></canvas></div>
+        </div>
+        <div id="opening-table-wrap"></div>
+      </div>
     </div>
+
+    <!-- Game length -->
     <div class="section-card">
-      <div class="section-head"><div class="section-icon icon-lines">♟</div><div class="section-title">Key Lines &amp; Variations to Study</div></div>
-      <div class="section-body" id="lines-body"></div>
+      <div class="section-head"><div class="section-icon" style="background:#f0e8ff">♞</div><div class="section-title">Game Length &amp; Phase Analysis</div></div>
+      <div class="section-body">
+        <div class="chart-grid">
+          <div class="chart-box full"><canvas id="chart-phase"></canvas></div>
+        </div>
+      </div>
     </div>
+
+    <!-- Elo vs Score -->
     <div class="section-card">
-      <div class="section-head"><div class="section-icon icon-summary">♛</div><div class="section-title">Coach's Summary</div></div>
-      <div class="section-body" id="summary-body"></div>
+      <div class="section-head"><div class="section-icon" style="background:var(--accent-soft)">♛</div><div class="section-title">Performance vs Elo Expectation</div></div>
+      <div class="section-body">
+        <div class="chart-grid">
+          <div class="chart-box full"><canvas id="chart-elo"></canvas></div>
+        </div>
+      </div>
     </div>
+
+    <!-- Worst openings -->
+    <div class="section-card">
+      <div class="section-head"><div class="section-icon" style="background:var(--accent-soft)">⚠</div><div class="section-title">Weakest Openings to Work On</div></div>
+      <div class="section-body" id="worst-openings-body"></div>
+    </div>
+
   </div>
 
-  <div class="footer-note">Powered by Claude AI &nbsp;·&nbsp; Analysis is educational, not engine-perfect</div>
+  <div class="footer-note">All analysis runs locally in your browser · No data is sent anywhere · No API key required</div>
 </div>
 
 <script>
-// ── YOUR API KEY — paste it between the quotes ────────────────────────────────
-const API_KEY = 'PASTE_YOUR_sk-ant-KEY_HERE';
-// ─────────────────────────────────────────────────────────────────────────────
-
-const analyzeBtn  = document.getElementById('btn-analyze');
-const clearBtn    = document.getElementById('btn-clear');
-const pgnInput    = document.getElementById('pgn-input');
-const loadingWrap = document.getElementById('loading-wrap');
-const loadingText = document.getElementById('loading-text');
-const resultsArea = document.getElementById('results-area');
-const errorBox    = document.getElementById('error-box');
-const pgnInfo     = document.getElementById('pgn-info');
-const dropZone    = document.getElementById('drop-zone');
-const fileInput   = document.getElementById('file-input');
-const dropLabel   = document.getElementById('drop-label');
-
+// ─── TAB + FILE UPLOAD ────────────────────────────────────────────────────────
 function switchTab(tab) {
   document.getElementById('tab-paste').classList.toggle('active', tab==='paste');
   document.getElementById('tab-upload').classList.toggle('active', tab==='upload');
   document.getElementById('panel-paste').style.display = tab==='paste' ? '' : 'none';
   document.getElementById('panel-upload').style.display = tab==='upload' ? '' : 'none';
 }
+
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const dropLabel = document.getElementById('drop-label');
+const pgnInput  = document.getElementById('pgn-input');
+const pgnInfo   = document.getElementById('pgn-info');
+const errorBox  = document.getElementById('error-box');
 
 function loadPGNFile(file) {
   if (!file) return;
@@ -229,7 +252,7 @@ function loadPGNFile(file) {
     pgnInput.value = e.target.result;
     dropZone.classList.add('has-file');
     dropLabel.innerHTML = `<span style="color:var(--teal)">✓ ${file.name} loaded (${(file.size/1024).toFixed(1)} KB)</span>`;
-    triggerPgnInfo(e.target.result);
+    updateInfo(e.target.result);
   };
   reader.readAsText(file);
 }
@@ -238,228 +261,495 @@ dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classL
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); loadPGNFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', () => loadPGNFile(fileInput.files[0]));
+pgnInput.addEventListener('input', () => updateInfo(pgnInput.value));
 
-function getCurrentPGN() { return pgnInput.value.trim(); }
-function showError(msg)  { errorBox.innerHTML = msg; errorBox.classList.add('visible'); }
-function hideError()     { errorBox.classList.remove('visible'); }
-function setLoading(msg) { loadingText.textContent = msg; loadingWrap.classList.add('active'); }
-function stopLoading()   { loadingWrap.classList.remove('active'); }
+function showError(msg) { errorBox.textContent=msg; errorBox.classList.add('visible'); }
+function hideError()    { errorBox.classList.remove('visible'); }
 
-function stripAnnotations(pgn) {
-  let s = pgn;
-  s = s.replace(/\{[^}]*\}/g, '');
-  for (let i = 0; i < 8; i++) s = s.replace(/\([^()]*\)/g, '');
-  s = s.replace(/\$\d+/g, '').replace(/[!?]{1,2}/g, '');
-  return s.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+// ─── PGN PARSER ───────────────────────────────────────────────────────────────
+function parseGames(pgn) {
+  // Split on [Event blocks
+  const chunks = pgn.split(/(?=\[Event\s)/g).filter(s => s.trim().length > 0);
+  return chunks.map(parseOneGame).filter(g => g !== null);
 }
-function extractAllTags(pgn, tag) {
-  return [...pgn.matchAll(new RegExp(`\\[${tag}\\s+"([^"]*)"\\]`,'gi'))].map(m=>m[1]);
-}
-function detectFormat(pgn) {
-  if (pgn.includes('chess.com')) return 'chess.com';
-  if (pgn.includes('lichess.org')) return 'Lichess';
-  return 'standard PGN';
-}
-function hasAnnotations(raw) { return /\{/.test(raw) || /\(/.test(raw) || /\$\d+/.test(raw); }
-const SKIP = new Set(['?','anonymous','guest','lichess ai','stockfish']);
-function extractPlayer(pgn) {
-  const all = [...extractAllTags(pgn,'White'), ...extractAllTags(pgn,'Black')];
-  const freq = {};
-  all.forEach(n => { const k=n.trim().toLowerCase(); if(k && !SKIP.has(k)) freq[n]=(freq[n]||0)+1; });
-  const s = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
-  return s.length ? s[0][0] : null;
-}
-function countForPlayer(pgn, player) {
-  const re = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+
+function parseOneGame(text) {
+  const headers = {};
+  const hRe = /\[(\w+)\s+"([^"]*)"\]/g;
+  let m;
+  while ((m = hRe.exec(text)) !== null) headers[m[1]] = m[2];
+  if (!headers.White && !headers.Black) return null;
+
+  // Strip headers + annotations to get move text
+  let moves = text.replace(/\[[^\]]*\]/g, '');
+  moves = moves.replace(/\{[^}]*\}/g, '');
+  for (let i=0;i<6;i++) moves = moves.replace(/\([^()]*\)/g, '');
+  moves = moves.replace(/\$\d+/g,'').replace(/[!?]{1,2}/g,'');
+  // Count half-moves
+  const tokens = moves.match(/[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[KQRBN])?[+#]?|O-O-O|O-O/g) || [];
+  const nMoves = tokens.length;
+
+  // Parse result
+  const resultTag = headers.Result || '';
+  let pgResult = null;
+  if (resultTag === '1-0') pgResult = 'white';
+  else if (resultTag === '0-1') pgResult = 'black';
+  else if (resultTag === '1/2-1/2') pgResult = 'draw';
+
+  // Time control
+  const tc = parseTC(headers.TimeControl || '');
+
+  // Date
+  const dateStr = (headers.Date || headers.UTCDate || '').replace(/\./g,'-');
+  const gameDate = dateStr.match(/\d{4}-\d{2}-\d{2}/) ? new Date(dateStr) : null;
+
+  // Opening from ECO url or name
+  let openingName = 'Unknown';
+  if (headers.ECOUrl) {
+    const slug = headers.ECOUrl.split('/').pop() || '';
+    openingName = slug.split('-').slice(0,4).map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') || 'Unknown';
+  } else if (headers.Opening) {
+    openingName = headers.Opening.split(':')[0].trim();
+  } else if (headers.ECO) {
+    openingName = ecoFamily(headers.ECO);
+  }
+
   return {
-    asWhite: (pgn.match(new RegExp(`\\[White\\s+"${re(player)}"`, 'gi'))||[]).length,
-    asBlack:  (pgn.match(new RegExp(`\\[Black\\s+"${re(player)}"`, 'gi'))||[]).length,
+    white: headers.White || '?',
+    black: headers.Black || '?',
+    result: pgResult,
+    whiteElo: parseInt(headers.WhiteElo) || null,
+    blackElo: parseInt(headers.BlackElo) || null,
+    eco: headers.ECO || '',
+    openingName,
+    tcLabel: tc.label,
+    tcCategory: tc.category,
+    nMoves,
+    gameDate,
   };
 }
-function countGames(pgn) { return (pgn.match(/^\[Event\s+/mg)||[]).length || 1; }
 
-function triggerPgnInfo(text) {
+function parseTC(tc) {
+  if (!tc || tc === '-') return { label:'Unknown', category:'Unknown' };
+  const parts = tc.split('+');
+  const base = parseInt(parts[0]) || 0;
+  const inc  = parts[1] ? parseInt(parts[1]) : 0;
+  const total = base + 40 * inc;
+  let category = 'Classical';
+  if (total < 180)  category = 'Bullet';
+  else if (total < 600)  category = 'Blitz';
+  else if (total < 1800) category = 'Rapid';
+  const label = inc > 0 ? `${Math.round(base/60)}+${inc}` : `${Math.round(base/60)} min`;
+  return { label, category };
+}
+
+function ecoFamily(eco) {
+  if (!eco) return 'Unknown';
+  const letter = eco[0];
+  const map = {A:'Flank/Irregular',B:'Semi-Open (1.e4)',C:'Open (1.e4 e5)',D:'Closed (1.d4)',E:'Indian Defenses'};
+  return map[letter] || 'Unknown';
+}
+
+// ─── PLAYER DETECTION ─────────────────────────────────────────────────────────
+const SKIP = new Set(['?','anonymous','guest','lichess ai','stockfish']);
+function detectPlayer(games) {
+  const freq = {};
+  games.forEach(g => {
+    [g.white, g.black].forEach(n => {
+      const k = n.trim().toLowerCase();
+      if (k && !SKIP.has(k)) freq[n] = (freq[n]||0) + 1;
+    });
+  });
+  const sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+  return sorted.length ? sorted[0][0] : null;
+}
+
+// ─── ENRICH WITH PLAYER PERSPECTIVE ──────────────────────────────────────────
+function enrichGames(games, player) {
+  return games.map(g => {
+    const pl = player.toLowerCase();
+    let color = null, outcome = null, userElo = null, oppElo = null;
+    if (g.white.toLowerCase() === pl) {
+      color = 'White';
+      userElo = g.whiteElo; oppElo = g.blackElo;
+      outcome = g.result === 'white' ? 'Win' : g.result === 'draw' ? 'Draw' : g.result === 'black' ? 'Loss' : null;
+    } else if (g.black.toLowerCase() === pl) {
+      color = 'Black';
+      userElo = g.blackElo; oppElo = g.whiteElo;
+      outcome = g.result === 'black' ? 'Win' : g.result === 'draw' ? 'Draw' : g.result === 'white' ? 'Loss' : null;
+    }
+    const score = outcome === 'Win' ? 1 : outcome === 'Draw' ? 0.5 : outcome === 'Loss' ? 0 : null;
+    const ratingDiff = (userElo && oppElo) ? userElo - oppElo : null;
+    const expectedScore = ratingDiff !== null ? 1/(1+Math.pow(10,-ratingDiff/400)) : null;
+    const scoreVsExp = (score !== null && expectedScore !== null) ? score - expectedScore : null;
+    return { ...g, color, outcome, score, userElo, oppElo, ratingDiff, expectedScore, scoreVsExp };
+  }).filter(g => g.color && g.outcome);
+}
+
+// ─── LIVE INFO ────────────────────────────────────────────────────────────────
+function updateInfo(text) {
   const raw = (text||'').trim();
   if (!raw) { pgnInfo.classList.remove('visible'); return; }
-  const player = extractPlayer(raw);
-  const total  = countGames(raw);
-  const fmt    = detectFormat(raw);
-  const annot  = hasAnnotations(raw);
-  const parts  = [];
-  if (total) parts.push(`${total} game${total>1?'s':''}`);
+  const count = (raw.match(/^\[Event\s/mg)||[]).length || 1;
+  const games = parseGames(raw);
+  const player = detectPlayer(games);
+  const parts = [];
+  parts.push(`${count} game${count>1?'s':''}`);
   if (player) parts.push(`player: ${player}`);
-  parts.push(fmt);
-  if (annot) parts.push('annotated ✓');
   pgnInfo.textContent = parts.join('  ·  ');
   pgnInfo.classList.add('visible');
 }
-pgnInput.addEventListener('input', () => triggerPgnInfo(pgnInput.value));
 
-const MSGS = ['Parsing PGN structure…','Identifying player…','Studying opening choices…','Finding recurring mistakes…','Building variation lines…','Finalising coach report…'];
-let msgIdx=0, msgTimer=null;
-function startLoadingCycle() { msgIdx=0; setLoading(MSGS[0]); msgTimer=setInterval(()=>{ msgIdx=(msgIdx+1)%MSGS.length; setLoading(MSGS[msgIdx]); },2200); }
-function stopLoadingCycle()  { clearInterval(msgTimer); stopLoading(); }
+// ─── CHART HELPERS ────────────────────────────────────────────────────────────
+const chartInstances = {};
+function makeChart(id, config) {
+  if (chartInstances[id]) chartInstances[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  chartInstances[id] = new Chart(ctx, config);
+}
 
-clearBtn.addEventListener('click', () => {
+const WIN_COL  = '#27ae60';
+const DRAW_COL = '#f39c12';
+const LOSS_COL = '#c0392b';
+
+function pct(n,total) { return total ? Math.round(100*n/total) : 0; }
+
+// ─── MAIN ANALYSIS ────────────────────────────────────────────────────────────
+document.getElementById('btn-clear').addEventListener('click', () => {
   pgnInput.value=''; fileInput.value='';
   dropZone.classList.remove('has-file');
   dropLabel.innerHTML='<strong>Drop your .pgn file here</strong><br>or click to browse';
   pgnInfo.classList.remove('visible');
-  resultsArea.classList.remove('visible');
+  document.getElementById('results-area').classList.remove('visible');
   hideError();
 });
 
-function safe(v,fb) { return (v!==undefined&&v!==null&&v!=='') ? v : fb; }
-function buildStats(d) {
-  const row=document.getElementById('stats-row'); row.innerHTML='';
-  [{val:safe(d.totalGames,'—'),lbl:'Games',cls:''},{val:safe(d.wins,'—'),lbl:'Wins',cls:'win'},{val:safe(d.losses,'—'),lbl:'Losses',cls:'loss'},{val:safe(d.draws,'—'),lbl:'Draws',cls:''}]
-  .forEach(it=>{ const el=document.createElement('div'); el.className='stat-card'; el.innerHTML=`<div class="stat-val ${it.cls}">${it.val}</div><div class="stat-lbl">${it.lbl}</div>`; row.appendChild(el); });
-}
-
-function renderResults(d) {
-  document.getElementById('player-name').textContent = safe(d.player,'Unknown Player');
-  const wg=safe(d.gamesAsWhite,0), bg=safe(d.gamesAsBlack,0);
-  document.getElementById('player-meta').textContent = `${wg} game${wg!==1?'s':''} as White · ${bg} game${bg!==1?'s':''} as Black`;
-  const badges=document.getElementById('color-badges'); badges.innerHTML='';
-  if(wg>0) badges.innerHTML+=`<span class="color-badge badge-white">♔ White ×${wg}</span>`;
-  if(bg>0) badges.innerHTML+=`<span class="color-badge badge-black">♚ Black ×${bg}</span>`;
-  buildStats(d);
-
-  const ob=document.getElementById('openings-body'); ob.innerHTML='';
-  const openings=d.openings||[];
-  if(openings.length){
-    ['White','Black'].forEach(color=>{
-      const grp=openings.filter(o=>(o.color||'').toLowerCase()===color.toLowerCase());
-      if(!grp.length) return;
-      const wrap=document.createElement('div'); wrap.className='opening-group';
-      const lbl=document.createElement('span'); lbl.className='opening-group-label'; lbl.textContent=`As ${color}`;
-      wrap.appendChild(lbl);
-      const pills=document.createElement('div');
-      grp.forEach(o=>{ const p=document.createElement('span'); p.className='opening-pill'; p.textContent=(o.name||'Unknown')+(o.count?` (${o.count}×)`:''); pills.appendChild(p); });
-      wrap.appendChild(pills); ob.appendChild(wrap);
-    });
-    if(!ob.children.length){
-      const pills=document.createElement('div');
-      openings.forEach(o=>{ const p=document.createElement('span'); p.className='opening-pill'; p.textContent=(o.name||'Unknown')+(o.count?` (${o.count}×)`:''); pills.appendChild(p); });
-      ob.appendChild(pills);
-    }
-  } else { ob.innerHTML='<p class="no-data">Opening data could not be determined.</p>'; }
-
-  const ib=document.getElementById('issues-body'); ib.innerHTML='';
-  const issues=d.issues||[];
-  if(issues.length){ issues.forEach((issue,i)=>{ const div=document.createElement('div'); div.className='issue-item'; div.innerHTML=`<div class="issue-label">Issue ${i+1}</div>${String(issue)}`; ib.appendChild(div); }); }
-  else { ib.innerHTML='<p class="no-data">No major recurring issues identified.</p>'; }
-
-  const lb=document.getElementById('lines-body'); lb.innerHTML='';
-  const lines=d.lines||[];
-  if(lines.length){
-    lines.forEach((line,i)=>{
-      const div=document.createElement('div'); div.className='line-item';
-      const ctx=String(line.context||line.label||'Variation '+(i+1));
-      const mvs=String(line.moves||line.line||'');
-      const expl=String(line.explanation||line.description||'');
-      div.innerHTML=`<div class="line-head"><span class="line-num">Line ${i+1}</span><span class="line-name">${ctx}</span></div>${mvs?`<div class="moves-block">${mvs}</div>`:''}${expl?`<div class="line-desc">${expl}</div>`:''}`;
-      lb.appendChild(div);
-    });
-  } else { lb.innerHTML='<p class="no-data">No specific variation lines identified.</p>'; }
-
-  const sb=document.getElementById('summary-body'); sb.innerHTML='';
-  const summary=d.summary||d.coach_summary||'';
-  if(summary){ const wrap=document.createElement('div'); wrap.className='summary-text'; wrap.innerHTML=String(summary).split(/\n{2,}/).map(p=>`<p>${p.trim()}</p>`).join(''); sb.appendChild(wrap); }
-  else { sb.innerHTML='<p class="no-data">No summary available.</p>'; }
-
-  resultsArea.classList.add('visible');
-  resultsArea.scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-analyzeBtn.addEventListener('click', async () => {
+document.getElementById('btn-analyze').addEventListener('click', () => {
   hideError();
+  const raw = pgnInput.value.trim();
+  if (!raw) { showError('Please paste or upload PGN games first.'); return; }
 
-  if (!API_KEY || API_KEY === 'PASTE_YOUR_sk-ant-KEY_HERE') {
-    showError('API key not set. Open index.html and paste your Anthropic key into the API_KEY variable at the top of the script.');
-    return;
-  }
+  const allGames = parseGames(raw);
+  if (!allGames.length) { showError('No valid PGN games found. Please check the format.'); return; }
 
-  const rawPGN = getCurrentPGN();
-  if (!rawPGN) { showError('Please paste or upload PGN games first.'); return; }
+  const player = detectPlayer(allGames);
+  if (!player) { showError('Could not identify a player name from the PGN headers.'); return; }
 
-  const player     = extractPlayer(rawPGN);
-  const format     = detectFormat(rawPGN);
-  const annotated  = hasAnnotations(rawPGN);
-  const totalGames = countGames(rawPGN);
-  const { asWhite, asBlack } = player ? countForPlayer(rawPGN,player) : {asWhite:0,asBlack:0};
-  const cleanPGN   = stripAnnotations(rawPGN);
+  const games = enrichGames(allGames, player);
+  if (!games.length) { showError('Could not match games to player "'+player+'". Check the PGN headers.'); return; }
 
-  analyzeBtn.disabled=true;
-  startLoadingCycle();
-  resultsArea.classList.remove('visible');
+  renderAll(games, player);
+});
 
-  const systemPrompt = `You are an expert chess coach. Analyse PGN chess games for a specific player and return a JSON report.
-RULES:
-- Return ONLY valid JSON. No markdown, no code fences, no preamble, no trailing text.
-- Every field is optional — only include what you can confidently determine. Never invent data.
-- "lines": MUST contain move sequences from the actual games showing better continuations. If no variations exist, derive lines from moves played and identify the critical moment where a different move would have helped.
-- "openings": identify by the first 4-8 moves. Use ECO names if recognisable, otherwise describe (e.g. "King's Pawn Game", "London System", "French Defence").
-- "issues": patterns across multiple games; for a single game, the key mistakes. Reference move numbers.
-- "summary": warm, direct coaching voice — not a bullet-point report.
-JSON structure:
-{"player":"string","totalGames":number,"wins":number,"losses":number,"draws":number,"gamesAsWhite":number,"gamesAsBlack":number,"openings":[{"name":"string","color":"White or Black","count":number}],"issues":["specific issue"],"lines":[{"context":"short label","moves":"1.e4 e5 ...","explanation":"what went wrong and what to do"}],"summary":"2-3 paragraph coach narrative"}`;
+function renderAll(games, player) {
+  const total = games.length;
+  const wins  = games.filter(g=>g.outcome==='Win').length;
+  const draws = games.filter(g=>g.outcome==='Draw').length;
+  const losses= games.filter(g=>g.outcome==='Loss').length;
+  const scoreP= total ? Math.round(100*(wins+0.5*draws)/total) : 0;
+  const asWhite = games.filter(g=>g.color==='White').length;
+  const asBlack = games.filter(g=>g.color==='Black').length;
+  const avgMoves= Math.round(games.reduce((s,g)=>s+g.nMoves,0)/total);
 
-  const userPrompt = `PGN source: ${format}
-${annotated?'Games include Stockfish annotations — use eval scores to pinpoint mistakes.':'Plain PGN, no engine annotations — analyse move choices directly.'}
-Total games: ${totalGames}
-${player?`Player under review: ${player} (${asWhite} as White, ${asBlack} as Black)`:'No usernames — treat White as the player in each game.'}
+  // Banner
+  document.getElementById('player-name').textContent = player;
+  document.getElementById('player-meta').textContent =
+    `${asWhite} games as White · ${asBlack} games as Black · Score: ${scoreP}%`;
 
-Games (annotations stripped):
-${cleanPGN}
-${annotated?`\nAnnotated original for reference:\n${rawPGN.substring(0,6000)}`:''}
+  // Stats row
+  const statsRow = document.getElementById('stats-row');
+  statsRow.innerHTML = '';
+  [
+    {val:total, lbl:'Games', cls:''},
+    {val:wins,  lbl:'Wins',  cls:'win'},
+    {val:draws, lbl:'Draws', cls:'draw'},
+    {val:losses,lbl:'Losses',cls:'loss'},
+    {val:scoreP+'%', lbl:'Score %', cls:''},
+    {val:avgMoves, lbl:'Avg Moves', cls:''},
+  ].forEach(it => {
+    const el = document.createElement('div'); el.className='stat-card';
+    el.innerHTML=`<div class="stat-val ${it.cls}">${it.val}</div><div class="stat-lbl">${it.lbl}</div>`;
+    statsRow.appendChild(el);
+  });
 
-Return the JSON report.`;
+  // Color charts
+  renderColorChart('chart-color-white', 'White', games);
+  renderColorChart('chart-color-black', 'Black', games);
+  renderTCChart(games);
+  renderOpeningsChart(games);
+  renderOpeningTable(games);
+  renderPhaseChart(games);
+  renderEloChart(games);
+  renderWorstOpenings(games);
 
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
+  document.getElementById('results-area').classList.add('visible');
+  document.getElementById('results-area').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderColorChart(canvasId, color, games) {
+  const g = games.filter(x=>x.color===color);
+  const w = g.filter(x=>x.outcome==='Win').length;
+  const d = g.filter(x=>x.outcome==='Draw').length;
+  const l = g.filter(x=>x.outcome==='Loss').length;
+  const t = g.length;
+  makeChart(canvasId, {
+    type:'doughnut',
+    data:{
+      labels:[`Win (${pct(w,t)}%)`,`Draw (${pct(d,t)}%)`,`Loss (${pct(l,t)}%)`],
+      datasets:[{data:[w,d,l],backgroundColor:[WIN_COL,DRAW_COL,LOSS_COL],borderWidth:2,borderColor:'white'}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        title:{display:true,text:`As ${color} (${t} games)`,font:{size:13,family:'IBM Plex Mono'},color:'#3d3228'},
+        legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}
+      }
+    }
+  });
+}
+
+function renderTCChart(games) {
+  const cats = ['Bullet','Blitz','Rapid','Classical'];
+  const data = cats.map(cat => {
+    const g = games.filter(x=>x.tcCategory===cat);
+    const t = g.length;
+    if (!t) return null;
+    return {
+      cat, t,
+      w: g.filter(x=>x.outcome==='Win').length,
+      d: g.filter(x=>x.outcome==='Draw').length,
+      l: g.filter(x=>x.outcome==='Loss').length,
+    };
+  }).filter(Boolean);
+
+  makeChart('chart-tc',{
+    type:'bar',
+    data:{
+      labels: data.map(x=>`${x.cat} (n=${x.t})`),
+      datasets:[
+        {label:'Wins', data:data.map(x=>pct(x.w,x.t)), backgroundColor:WIN_COL},
+        {label:'Draws',data:data.map(x=>pct(x.d,x.t)), backgroundColor:DRAW_COL},
+        {label:'Losses',data:data.map(x=>pct(x.l,x.t)),backgroundColor:LOSS_COL},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        title:{display:true,text:'Score % by Time Control',font:{size:13,family:'IBM Plex Mono'},color:'#3d3228'},
+        legend:{position:'bottom'}
       },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        system: systemPrompt,
-        messages: [{ role:'user', content:userPrompt }]
-      })
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(()=>({}));
-      throw new Error(err.error?.message || `API error ${resp.status}`);
+      scales:{
+        x:{stacked:true},
+        y:{stacked:true,max:100,ticks:{callback:v=>v+'%'}}
+      }
     }
+  });
+}
 
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+function renderOpeningsChart(games) {
+  const MIN = 2;
+  const freq = {};
+  games.forEach(g => {
+    if (g.openingName==='Unknown') return;
+    const k = g.openingName;
+    if (!freq[k]) freq[k]={w:0,d:0,l:0,t:0};
+    freq[k].t++;
+    if (g.outcome==='Win') freq[k].w++;
+    else if (g.outcome==='Draw') freq[k].d++;
+    else freq[k].l++;
+  });
+  const sorted = Object.entries(freq).filter(([,v])=>v.t>=MIN).sort((a,b)=>b[1].t-a[1].t).slice(0,15);
+  const labels = sorted.map(([k])=>k);
+  const wins   = sorted.map(([,v])=>pct(v.w,v.t));
+  const draws  = sorted.map(([,v])=>pct(v.d,v.t));
+  const losses = sorted.map(([,v])=>pct(v.l,v.t));
 
-    const raw = data.content.map(b=>b.text||'').join('');
-    let parsed;
-    for (const fn of [
-      ()=>JSON.parse(raw.trim()),
-      ()=>JSON.parse(raw.replace(/```json|```/gi,'').trim()),
-      ()=>{ const m=raw.match(/\{[\s\S]+\}/); if(m) return JSON.parse(m[0]); throw new Error('no json'); }
-    ]) { try{ parsed=fn(); break; } catch(e){} }
+  makeChart('chart-openings',{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Win%', data:wins,  backgroundColor:WIN_COL},
+        {label:'Draw%',data:draws, backgroundColor:DRAW_COL},
+        {label:'Loss%',data:losses,backgroundColor:LOSS_COL},
+      ]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        title:{display:true,text:'Top Openings — Win/Draw/Loss %',font:{size:13,family:'IBM Plex Mono'},color:'#3d3228'},
+        legend:{position:'bottom'}
+      },
+      scales:{
+        x:{stacked:true,max:100,ticks:{callback:v=>v+'%'}},
+        y:{stacked:true,ticks:{font:{size:10}}}
+      }
+    }
+  });
+}
 
-    if (!parsed) throw new Error('Could not parse analysis response — please try again.');
+function renderOpeningTable(games) {
+  const MIN = 2;
+  const freq = {};
+  games.forEach(g => {
+    const k = g.openingName;
+    if (!freq[k]) freq[k]={name:k,w:0,d:0,l:0,t:0,scoreSum:0,expSum:0,colors:new Set()};
+    freq[k].t++;
+    freq[k].colors.add(g.color);
+    if (g.outcome==='Win') freq[k].w++;
+    else if (g.outcome==='Draw') freq[k].d++;
+    else freq[k].l++;
+    if (g.score!==null) freq[k].scoreSum+=g.score;
+    if (g.scoreVsExp!==null) freq[k].expSum+=g.scoreVsExp;
+  });
 
-    stopLoadingCycle();
-    renderResults(parsed);
-  } catch(err) {
-    stopLoadingCycle();
-    showError('Analysis failed: '+(err.message||'Unknown error. Please try again.'));
-  } finally {
-    analyzeBtn.disabled=false;
-  }
-});
+  const rows = Object.values(freq)
+    .filter(v=>v.t>=MIN)
+    .sort((a,b)=>b.t-a.t)
+    .slice(0,20);
+
+  const wrap = document.getElementById('opening-table-wrap');
+  if (!rows.length) { wrap.innerHTML='<p style="color:var(--ink-mute);font-size:0.88rem;font-style:italic;">Not enough games per opening (min 2).</p>'; return; }
+
+  let html = `<table class="data-table">
+    <thead><tr>
+      <th>Opening</th><th>Color</th><th>G</th><th>W</th><th>D</th><th>L</th><th>Score %</th><th>vs Elo Exp</th>
+    </tr></thead><tbody>`;
+
+  rows.forEach(r => {
+    const sp = r.t ? Math.round(100*r.scoreSum/r.t) : 0;
+    const ve = r.t ? (100*r.expSum/r.t).toFixed(1) : '—';
+    const veNum = parseFloat(ve);
+    const veColor = isNaN(veNum) ? '' : veNum>0 ? 'color:var(--win)' : veNum<0 ? 'color:var(--loss)' : '';
+    const barW = Math.min(sp, 100);
+    const barColor = sp>55?WIN_COL:sp<45?LOSS_COL:DRAW_COL;
+    const colorBadges = [...r.colors].map(c=>`<span class="badge badge-${c.toLowerCase()}">${c}</span>`).join(' ');
+    html += `<tr>
+      <td>${r.name}</td>
+      <td>${colorBadges}</td>
+      <td>${r.t}</td>
+      <td class="tag-win">${r.w}</td>
+      <td class="tag-draw">${r.d}</td>
+      <td class="tag-loss">${r.l}</td>
+      <td><div class="score-bar-wrap"><div class="score-bar" style="width:${barW}px;background:${barColor}"></div><span class="score-val">${sp}%</span></div></td>
+      <td style="${veColor};font-family:'IBM Plex Mono',monospace;font-size:0.82rem;">${isNaN(veNum)?'—':(veNum>0?'+':'')+ve+'%'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function renderPhaseChart(games) {
+  const buckets = ['1–20','21–40','41–60','61–80','80+'];
+  const ranges  = [[1,20],[21,40],[41,60],[61,80],[81,Infinity]];
+  const data = ranges.map(([lo,hi]) => {
+    const g = games.filter(x=>x.nMoves>=lo && x.nMoves<=hi);
+    const t = g.length;
+    if (!t) return {w:0,d:0,l:0,t:0};
+    return {
+      w:pct(g.filter(x=>x.outcome==='Win').length,t),
+      d:pct(g.filter(x=>x.outcome==='Draw').length,t),
+      l:pct(g.filter(x=>x.outcome==='Loss').length,t),
+      t
+    };
+  });
+
+  makeChart('chart-phase',{
+    type:'bar',
+    data:{
+      labels: buckets.map((b,i)=>`${b} moves (n=${data[i].t})`),
+      datasets:[
+        {label:'Win%', data:data.map(x=>x.w), backgroundColor:WIN_COL},
+        {label:'Draw%',data:data.map(x=>x.d), backgroundColor:DRAW_COL},
+        {label:'Loss%',data:data.map(x=>x.l), backgroundColor:LOSS_COL},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        title:{display:true,text:'Outcome % by Game Length (half-moves)',font:{size:13,family:'IBM Plex Mono'},color:'#3d3228'},
+        legend:{position:'bottom'}
+      },
+      scales:{
+        x:{stacked:true},
+        y:{stacked:true,max:100,ticks:{callback:v=>v+'%'}}
+      }
+    }
+  });
+}
+
+function renderEloChart(games) {
+  const bins  = [[-Infinity,-200],[-200,-100],[-100,-50],[-50,0],[0,50],[50,100],[100,200],[200,Infinity]];
+  const lbls  = ['< −200','−200 to −100','−100 to −50','−50 to 0','0 to +50','+50 to +100','+100 to +200','> +200'];
+  const data  = bins.map(([lo,hi]) => {
+    const g = games.filter(x=>x.ratingDiff!==null && x.ratingDiff>lo && x.ratingDiff<=hi);
+    const t = g.length;
+    if (!t) return null;
+    const score = Math.round(100*g.reduce((s,x)=>s+(x.score||0),0)/t);
+    const exp   = Math.round(100*g.reduce((s,x)=>s+(x.expectedScore||0),0)/t);
+    return {score, exp, t};
+  });
+
+  makeChart('chart-elo',{
+    type:'bar',
+    data:{
+      labels: lbls.map((l,i)=>data[i]?`${l}\n(n=${data[i].t})`:l),
+      datasets:[
+        {label:'Actual score %',   data:data.map(x=>x?x.score:null), backgroundColor:'#2980b9'},
+        {label:'Elo expected %',   data:data.map(x=>x?x.exp:null),   backgroundColor:'rgba(41,128,185,0.3)', borderColor:'#2980b9', borderWidth:1, type:'line', fill:false, pointRadius:4},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        title:{display:true,text:'Actual Score % vs Elo Expectation by Rating Difference',font:{size:13,family:'IBM Plex Mono'},color:'#3d3228'},
+        legend:{position:'bottom'}
+      },
+      scales:{
+        y:{min:0,max:100,ticks:{callback:v=>v+'%'}}
+      }
+    }
+  });
+}
+
+function renderWorstOpenings(games) {
+  const MIN = 2;
+  const freq = {};
+  games.forEach(g => {
+    const k = `${g.openingName}__${g.color}`;
+    if (!freq[k]) freq[k]={name:g.openingName,color:g.color,t:0,scoreSum:0,expSum:0,w:0,l:0,d:0};
+    freq[k].t++;
+    if (g.score!==null) freq[k].scoreSum+=g.score;
+    if (g.scoreVsExp!==null) freq[k].expSum+=g.scoreVsExp;
+    if (g.outcome==='Win') freq[k].w++;
+    else if (g.outcome==='Draw') freq[k].d++;
+    else freq[k].l++;
+  });
+
+  const worst = Object.values(freq)
+    .filter(v=>v.t>=MIN)
+    .map(v=>({...v, perf: v.expSum/v.t, scoreP: Math.round(100*v.scoreSum/v.t)}))
+    .sort((a,b)=>a.perf-b.perf)
+    .slice(0,8);
+
+  const body = document.getElementById('worst-openings-body');
+  if (!worst.length) { body.innerHTML='<p style="color:var(--ink-mute);font-size:0.88rem;font-style:italic;">Not enough games to identify weak openings.</p>'; return; }
+
+  body.innerHTML = worst.map((r,i) => {
+    const diff = (100*r.perf).toFixed(1);
+    const diffStr = parseFloat(diff)>0?'+'+diff:diff;
+    return `<div style="border-left:3px solid var(--loss);padding:10px 0 10px 16px;margin-bottom:14px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--loss);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Weakness #${i+1}</div>
+      <strong>${r.name}</strong> as <span class="badge badge-${r.color.toLowerCase()}">${r.color}</span> &nbsp;
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--ink-mute);">${r.t} games · ${r.scoreP}% score · <span style="color:var(--loss)">${diffStr}% vs Elo expectation</span></span>
+      <div style="font-size:0.88rem;color:var(--ink-mute);margin-top:4px;">${r.w}W / ${r.d}D / ${r.l}L</div>
+    </div>`;
+  }).join('');
+}
+
+// Info on paste
+updateInfo('');
 </script>
 </body>
 </html>
