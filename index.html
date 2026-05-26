@@ -196,9 +196,11 @@ The most common player name will be identified automatically."></textarea>
 
   <div class="footer-note">Powered by Claude AI &nbsp;·&nbsp; Analysis is educational, not engine-perfect</div>
 </div>
+
 <script>
-// Calls the Netlify serverless function — no config needed, just works
-const API = '/.netlify/functions/analyse';
+// ── YOUR API KEY — paste it between the quotes ────────────────────────────────
+const API_KEY = 'PASTE_YOUR_sk-ant-KEY_HERE';
+// ─────────────────────────────────────────────────────────────────────────────
 
 const analyzeBtn  = document.getElementById('btn-analyze');
 const clearBtn    = document.getElementById('btn-clear');
@@ -231,7 +233,6 @@ function loadPGNFile(file) {
   };
   reader.readAsText(file);
 }
-
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
@@ -251,7 +252,6 @@ function stripAnnotations(pgn) {
   s = s.replace(/\$\d+/g, '').replace(/[!?]{1,2}/g, '');
   return s.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
-
 function extractAllTags(pgn, tag) {
   return [...pgn.matchAll(new RegExp(`\\[${tag}\\s+"([^"]*)"\\]`,'gi'))].map(m=>m[1]);
 }
@@ -261,7 +261,6 @@ function detectFormat(pgn) {
   return 'standard PGN';
 }
 function hasAnnotations(raw) { return /\{/.test(raw) || /\(/.test(raw) || /\$\d+/.test(raw); }
-
 const SKIP = new Set(['?','anonymous','guest','lichess ai','stockfish']);
 function extractPlayer(pgn) {
   const all = [...extractAllTags(pgn,'White'), ...extractAllTags(pgn,'Black')];
@@ -311,7 +310,6 @@ clearBtn.addEventListener('click', () => {
 });
 
 function safe(v,fb) { return (v!==undefined&&v!==null&&v!=='') ? v : fb; }
-
 function buildStats(d) {
   const row=document.getElementById('stats-row'); row.innerHTML='';
   [{val:safe(d.totalGames,'—'),lbl:'Games',cls:''},{val:safe(d.wins,'—'),lbl:'Wins',cls:'win'},{val:safe(d.losses,'—'),lbl:'Losses',cls:'loss'},{val:safe(d.draws,'—'),lbl:'Draws',cls:''}]
@@ -376,6 +374,12 @@ function renderResults(d) {
 
 analyzeBtn.addEventListener('click', async () => {
   hideError();
+
+  if (!API_KEY || API_KEY === 'PASTE_YOUR_sk-ant-KEY_HERE') {
+    showError('API key not set. Open index.html and paste your Anthropic key into the API_KEY variable at the top of the script.');
+    return;
+  }
+
   const rawPGN = getCurrentPGN();
   if (!rawPGN) { showError('Please paste or upload PGN games first.'); return; }
 
@@ -396,10 +400,10 @@ RULES:
 - Every field is optional — only include what you can confidently determine. Never invent data.
 - "lines": MUST contain move sequences from the actual games showing better continuations. If no variations exist, derive lines from moves played and identify the critical moment where a different move would have helped.
 - "openings": identify by the first 4-8 moves. Use ECO names if recognisable, otherwise describe (e.g. "King's Pawn Game", "London System", "French Defence").
-- "issues": patterns across multiple games where possible; for a single game, the key mistakes. Reference move numbers.
+- "issues": patterns across multiple games; for a single game, the key mistakes. Reference move numbers.
 - "summary": warm, direct coaching voice — not a bullet-point report.
 JSON structure:
-{"player":"string","totalGames":number,"wins":number,"losses":number,"draws":number,"gamesAsWhite":number,"gamesAsBlack":number,"openings":[{"name":"string","color":"White or Black","count":number}],"issues":["specific issue description"],"lines":[{"context":"short label","moves":"1.e4 e5 ...","explanation":"what went wrong and what to do"}],"summary":"2-3 paragraph coach narrative"}`;
+{"player":"string","totalGames":number,"wins":number,"losses":number,"draws":number,"gamesAsWhite":number,"gamesAsBlack":number,"openings":[{"name":"string","color":"White or Black","count":number}],"issues":["specific issue"],"lines":[{"context":"short label","moves":"1.e4 e5 ...","explanation":"what went wrong and what to do"}],"summary":"2-3 paragraph coach narrative"}`;
 
   const userPrompt = `PGN source: ${format}
 ${annotated?'Games include Stockfish annotations — use eval scores to pinpoint mistakes.':'Plain PGN, no engine annotations — analyse move choices directly.'}
@@ -413,20 +417,25 @@ ${annotated?`\nAnnotated original for reference:\n${rawPGN.substring(0,6000)}`:'
 Return the JSON report.`;
 
   try {
-    const resp = await fetch(API, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:4000,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
         system: systemPrompt,
-        messages:[{role:'user',content:userPrompt}]
+        messages: [{ role:'user', content:userPrompt }]
       })
     });
 
     if (!resp.ok) {
       const err = await resp.json().catch(()=>({}));
-      throw new Error(err.error?.message || `Server error ${resp.status}`);
+      throw new Error(err.error?.message || `API error ${resp.status}`);
     }
 
     const data = await resp.json();
